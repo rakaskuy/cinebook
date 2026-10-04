@@ -21,12 +21,9 @@ import {
   FileText,
   Sparkles,
   Trash2,
-  Library,
-  BookOpen,
 } from 'lucide-react';
 import {
   adminFetchAllSessions,
-  adminFetchFilms,
   adminCreateSession,
   adminUpdateSession,
   executeAdminCancelSession,
@@ -34,12 +31,10 @@ import {
 
 export default function AdminSessionsPage() {
   const [sessions, setSessions] = useState<any[]>([]);
-  const [films, setFilms] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Modal: Tambah Sesi Baru
+  // Modal: Tambah Sesi & Film Kustom Baru
   const [showAddModal, setShowAddModal] = useState(false);
-  const [creationMode, setCreationMode] = useState<'custom' | 'catalog'>('custom');
 
   // Custom film fields
   const [customJudul, setCustomJudul] = useState('');
@@ -49,9 +44,6 @@ export default function AdminSessionsPage() {
   const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Catalog selection fields
-  const [newFilmId, setNewFilmId] = useState('');
 
   // Session common schedule fields
   const [newTanggal, setNewTanggal] = useState('');
@@ -80,15 +72,8 @@ export default function AdminSessionsPage() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [sessData, filmsData] = await Promise.all([
-        adminFetchAllSessions(),
-        adminFetchFilms(),
-      ]);
+      const sessData = await adminFetchAllSessions();
       setSessions(sessData || []);
-      setFilms(filmsData || []);
-      if (filmsData && filmsData.length > 0 && !newFilmId) {
-        setNewFilmId(filmsData[0].id);
-      }
     } catch (err) {
       console.error('Failed to load session management data:', err);
     } finally {
@@ -143,36 +128,27 @@ export default function AdminSessionsPage() {
     e.preventDefault();
     setAddError(null);
 
+    if (!customJudul.trim()) {
+      setAddError('Nama/judul film wajib diisi.');
+      return;
+    }
+    if (!customDeskripsi.trim()) {
+      setAddError('Ringkasan cerita / sinopsis film wajib diisi.');
+      return;
+    }
     if (!newTanggal || !newJamMulai || newKuota <= 0) {
       setAddError('Harap lengkapi tanggal penayangan, jam mulai, dan kuota kursi teater.');
       return;
-    }
-
-    if (creationMode === 'custom') {
-      if (!customJudul.trim()) {
-        setAddError('Nama/judul film kustom wajib diisi.');
-        return;
-      }
-      if (!customDeskripsi.trim()) {
-        setAddError('Ringkasan cerita / sinopsis film wajib diisi.');
-        return;
-      }
-    } else {
-      if (!newFilmId) {
-        setAddError('Pilih film dari katalog bioskop.');
-        return;
-      }
     }
 
     setSubmittingAdd(true);
     try {
       const formattedJam = newJamMulai.length === 5 ? `${newJamMulai}:00` : newJamMulai;
       const res = await adminCreateSession({
-        filmId: creationMode === 'catalog' ? newFilmId : undefined,
         tanggal: newTanggal,
         jamMulai: formattedJam,
         kuotaTotal: Number(newKuota),
-        isCustomFilm: creationMode === 'custom',
+        isCustomFilm: true,
         customJudul: customJudul.trim(),
         customDeskripsi: customDeskripsi.trim(),
         customDurasiMenit: Number(customDurasi) || 120,
@@ -181,7 +157,7 @@ export default function AdminSessionsPage() {
 
       setNotification({
         type: 'success',
-        text: res.message || 'Sesi teater dan film baru berhasil ditambahkan!',
+        text: res.message || 'Film dan sesi teater berhasil diterbitkan!',
       });
       setShowAddModal(false);
 
@@ -336,12 +312,23 @@ export default function AdminSessionsPage() {
           <span>Memuat data sesi teater dari Supabase...</span>
         </div>
       ) : sessions.length === 0 ? (
-        <div className="bg-white border-4 border-dashed border-sky-300 rounded-3xl p-12 text-center space-y-3">
-          <Film className="w-12 h-12 mx-auto text-sky-400" />
-          <h3 className="font-black text-lg uppercase text-glacier-navy">Belum Ada Sesi Terdaftar</h3>
-          <p className="text-xs font-bold text-sky-900/60">
-            Klik tombol "Tambah Sesi Baru" di atas untuk menambahkan jadwal penayangan film baru.
-          </p>
+        <div className="bg-white border-4 border-dashed border-sky-300 rounded-3xl p-12 text-center space-y-4">
+          <div className="w-16 h-16 mx-auto rounded-2xl bg-sky-50 border-2 border-glacier-navy flex items-center justify-center text-sky-600 shadow-hard-sm">
+            <Film className="w-8 h-8" />
+          </div>
+          <div className="space-y-1">
+            <h3 className="font-black text-lg uppercase text-glacier-navy">Belum Ada Sesi Terdaftar</h3>
+            <p className="text-xs font-bold text-sky-900/60 max-w-md mx-auto">
+              Belum ada film dan sesi penayangan aktif di database. Tambahkan film festival kustom beserta poster dan jadwalnya.
+            </p>
+          </div>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="inline-flex items-center gap-2 bg-gradient-to-r from-cyan-400 to-sky-500 hover:from-cyan-300 hover:to-sky-400 text-glacier-navy font-black text-xs uppercase px-5 py-3 border-3 border-glacier-navy rounded-xl shadow-hard transition-all"
+          >
+            <Plus className="w-4 h-4 stroke-[3]" />
+            <span>Tambah Film &amp; Sesi Baru</span>
+          </button>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -498,196 +485,141 @@ export default function AdminSessionsPage() {
                 </button>
               </div>
 
-              {/* Mode Selector Tabs */}
-              <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-2xl border-2 border-glacier-navy">
-                <button
-                  type="button"
-                  onClick={() => setCreationMode('custom')}
-                  className={`py-2 px-3 rounded-xl text-xs font-black uppercase transition-all flex items-center justify-center gap-1.5 ${
-                    creationMode === 'custom'
-                      ? 'bg-gradient-to-r from-cyan-400 to-sky-400 text-glacier-navy border-2 border-glacier-navy shadow-hard-sm'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  <Sparkles className="w-3.5 h-3.5" />
-                  <span>Film Baru (Kustom)</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setCreationMode('catalog')}
-                  className={`py-2 px-3 rounded-xl text-xs font-black uppercase transition-all flex items-center justify-center gap-1.5 ${
-                    creationMode === 'catalog'
-                      ? 'bg-gradient-to-r from-cyan-400 to-sky-400 text-glacier-navy border-2 border-glacier-navy shadow-hard-sm'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  <Library className="w-3.5 h-3.5" />
-                  <span>Pilih dari Katalog</span>
-                </button>
-              </div>
-
               <form onSubmit={handleCreateSession} className="space-y-4">
-                {creationMode === 'custom' ? (
-                  /* ----------------- SECTION: FILM KUSTOM ----------------- */
-                  <div className="space-y-3.5 p-3.5 sm:p-4 bg-sky-50/60 border-2 border-sky-200 rounded-2xl">
-                    <div className="flex items-center gap-1.5 text-xs font-black uppercase text-sky-900">
-                      <Film className="w-4 h-4 text-sky-600" />
-                      <span>Informasi Film Kustom</span>
-                    </div>
+                {/* ----------------- SECTION: FILM KUSTOM ----------------- */}
+                <div className="space-y-3.5 p-3.5 sm:p-4 bg-sky-50/60 border-2 border-sky-200 rounded-2xl">
+                  <div className="flex items-center gap-1.5 text-xs font-black uppercase text-sky-900">
+                    <Film className="w-4 h-4 text-sky-600" />
+                    <span>Informasi Film Festival (Kustom)</span>
+                  </div>
 
-                    {/* Custom Title Input */}
-                    <div>
-                      <label className="block text-xs font-black uppercase text-glacier-navy mb-1">
-                        Nama / Judul Film <span className="text-rose-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="Contoh: Ekspedisi Lembah Gletser Arktik"
-                        value={customJudul}
-                        onChange={(e) => setCustomJudul(e.target.value)}
-                        required={creationMode === 'custom'}
-                        className="w-full bg-white border-2 border-glacier-navy rounded-xl px-3.5 py-2 text-xs font-bold text-glacier-navy placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-400"
-                      />
-                    </div>
+                  {/* Custom Title Input */}
+                  <div>
+                    <label className="block text-xs font-black uppercase text-glacier-navy mb-1">
+                      Nama / Judul Film <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Contoh: Ekspedisi Lembah Gletser Arktik"
+                      value={customJudul}
+                      onChange={(e) => setCustomJudul(e.target.value)}
+                      required
+                      className="w-full bg-white border-2 border-glacier-navy rounded-xl px-3.5 py-2 text-xs font-bold text-glacier-navy placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-400"
+                    />
+                  </div>
 
-                    {/* Thumbnail Upload + Live Preview */}
-                    <div>
-                      <label className="block text-xs font-black uppercase text-glacier-navy mb-1">
-                        Upload Thumbnail / Poster Film
-                      </label>
+                  {/* Thumbnail Upload + Live Preview */}
+                  <div>
+                    <label className="block text-xs font-black uppercase text-glacier-navy mb-1">
+                      Upload Thumbnail / Poster Film
+                    </label>
 
-                      {thumbnailPreview ? (
-                        <div className="relative border-2 border-glacier-navy rounded-xl overflow-hidden bg-slate-950 p-2 flex items-center gap-3">
-                          <img
-                            src={thumbnailPreview}
-                            alt="Preview Thumbnail"
-                            className="w-20 h-24 object-cover rounded-lg border border-slate-700 shadow-sm"
-                          />
-                          <div className="flex-1 space-y-1.5 text-left">
-                            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-400">
-                              <Check className="w-3.5 h-3.5" />
-                              Thumbnail siap di-publish
-                            </span>
-                            <p className="text-[10px] text-slate-300">
-                              Gambar akan tampil di landing page dan tiket penonton.
-                            </p>
-                            <div className="flex items-center gap-2 pt-1">
-                              <button
-                                type="button"
-                                onClick={() => fileInputRef.current?.click()}
-                                className="py-1 px-2.5 bg-sky-200 hover:bg-sky-300 text-glacier-navy text-[10px] font-black uppercase rounded-lg border border-glacier-navy transition-all"
-                              >
-                                Ganti Gambar
-                              </button>
-                              <button
-                                type="button"
-                                onClick={handleClearThumbnail}
-                                className="py-1 px-2.5 bg-rose-100 hover:bg-rose-200 text-rose-800 text-[10px] font-black uppercase rounded-lg border border-rose-300 transition-all flex items-center gap-1"
-                              >
-                                <Trash2 className="w-3 h-3" />
-                                Hapus
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      ) : (
-                        <div
-                          onClick={() => fileInputRef.current?.click()}
-                          className="border-2 border-dashed border-sky-300 hover:border-sky-500 bg-white hover:bg-sky-50/50 rounded-xl p-4 text-center cursor-pointer transition-all space-y-1.5"
-                        >
-                          <div className="w-10 h-10 mx-auto rounded-full bg-sky-100 flex items-center justify-center text-sky-600">
-                            <Upload className="w-5 h-5" />
-                          </div>
-                          <p className="text-xs font-bold text-glacier-navy">
-                            Klik atau drag &amp; drop gambar thumbnail di sini
-                          </p>
-                          <p className="text-[10px] text-slate-400">
-                            Format JPG, PNG, atau WebP (Maksimal 5 MB)
-                          </p>
-                        </div>
-                      )}
-
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept="image/*"
-                        onChange={handleThumbnailUpload}
-                        className="hidden"
-                      />
-
-                      {uploadError && (
-                        <p className="text-[11px] font-bold text-rose-600 mt-1">
-                          {uploadError}
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Ringkasan Cerita / Synopsis */}
-                    <div>
-                      <div className="flex items-center justify-between mb-1">
-                        <label className="block text-xs font-black uppercase text-glacier-navy">
-                          Ringkasan Cerita / Sinopsis <span className="text-rose-500">*</span>
-                        </label>
-                        <span className="text-[10px] font-medium text-slate-400">
-                          {customDeskripsi.length} karakter
-                        </span>
-                      </div>
-                      <textarea
-                        rows={3}
-                        placeholder="Tuliskan sinopsis singkat cerita film ini untuk menarik penonton dan siswa yang memesan tiket..."
-                        value={customDeskripsi}
-                        onChange={(e) => setCustomDeskripsi(e.target.value)}
-                        required={creationMode === 'custom'}
-                        className="w-full bg-white border-2 border-glacier-navy rounded-xl p-3 text-xs font-bold text-glacier-navy placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-400"
-                      />
-                    </div>
-
-                    {/* Durasi Film */}
-                    <div>
-                      <label className="block text-xs font-black uppercase text-glacier-navy mb-1">
-                        Estimasi Durasi Film (Menit)
-                      </label>
-                      <div className="relative">
-                        <input
-                          type="number"
-                          min="15"
-                          max="360"
-                          value={customDurasi}
-                          onChange={(e) => setCustomDurasi(Number(e.target.value))}
-                          className="w-full bg-white border-2 border-glacier-navy rounded-xl pl-3.5 pr-16 py-2 text-xs font-bold text-glacier-navy focus:outline-none focus:ring-2 focus:ring-sky-400"
+                    {thumbnailPreview ? (
+                      <div className="relative border-2 border-glacier-navy rounded-xl overflow-hidden bg-slate-950 p-2 flex items-center gap-3">
+                        <img
+                          src={thumbnailPreview}
+                          alt="Preview Thumbnail"
+                          className="w-20 h-24 object-cover rounded-lg border border-slate-700 shadow-sm"
                         />
-                        <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500">
-                          Menit
-                        </span>
+                        <div className="flex-1 space-y-1.5 text-left">
+                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-400">
+                            <Check className="w-3.5 h-3.5" />
+                            Thumbnail siap di-publish
+                          </span>
+                          <p className="text-[10px] text-slate-300">
+                            Gambar akan tampil di landing page dan tiket penonton.
+                          </p>
+                          <div className="flex items-center gap-2 pt-1">
+                            <button
+                              type="button"
+                              onClick={() => fileInputRef.current?.click()}
+                              className="py-1 px-2.5 bg-sky-200 hover:bg-sky-300 text-glacier-navy text-[10px] font-black uppercase rounded-lg border border-glacier-navy transition-all"
+                            >
+                              Ganti Gambar
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleClearThumbnail}
+                              className="py-1 px-2.5 bg-rose-100 hover:bg-rose-200 text-rose-800 text-[10px] font-black uppercase rounded-lg border border-rose-300 transition-all flex items-center gap-1"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                              Hapus
+                            </button>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                ) : (
-                  /* ----------------- SECTION: DARI KATALOG ----------------- */
-                  <div className="space-y-3 p-3.5 sm:p-4 bg-sky-50/60 border-2 border-sky-200 rounded-2xl">
-                    <div className="flex items-center gap-1.5 text-xs font-black uppercase text-sky-900">
-                      <Library className="w-4 h-4 text-sky-600" />
-                      <span>Pilih Film Terdaftar</span>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-black uppercase text-glacier-navy mb-1">
-                        Daftar Film Bioskop
-                      </label>
-                      <select
-                        value={newFilmId}
-                        onChange={(e) => setNewFilmId(e.target.value)}
-                        required={creationMode === 'catalog'}
-                        className="w-full bg-white border-2 border-glacier-navy rounded-xl px-3.5 py-2.5 text-xs font-bold text-glacier-navy focus:outline-none focus:ring-2 focus:ring-sky-400"
+                    ) : (
+                      <div
+                        onClick={() => fileInputRef.current?.click()}
+                        className="border-2 border-dashed border-sky-300 hover:border-sky-500 bg-white hover:bg-sky-50/50 rounded-xl p-4 text-center cursor-pointer transition-all space-y-1.5"
                       >
-                        {films.map((f) => (
-                          <option key={f.id} value={f.id}>
-                            {f.judul} ({f.durasi_menit} Menit)
-                          </option>
-                        ))}
-                      </select>
+                        <div className="w-10 h-10 mx-auto rounded-full bg-sky-100 flex items-center justify-center text-sky-600">
+                          <Upload className="w-5 h-5" />
+                        </div>
+                        <p className="text-xs font-bold text-glacier-navy">
+                          Klik atau drag &amp; drop gambar thumbnail di sini
+                        </p>
+                        <p className="text-[10px] text-slate-400">
+                          Format JPG, PNG, atau WebP (Maksimal 5 MB)
+                        </p>
+                      </div>
+                    )}
+
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleThumbnailUpload}
+                      className="hidden"
+                    />
+
+                    {uploadError && (
+                      <p className="text-[11px] font-bold text-rose-600 mt-1">
+                        {uploadError}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Ringkasan Cerita / Synopsis */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-xs font-black uppercase text-glacier-navy">
+                        Ringkasan Cerita / Sinopsis <span className="text-rose-500">*</span>
+                      </label>
+                      <span className="text-[10px] font-medium text-slate-400">
+                        {customDeskripsi.length} karakter
+                      </span>
+                    </div>
+                    <textarea
+                      rows={3}
+                      placeholder="Tuliskan sinopsis singkat cerita film ini untuk menarik penonton dan siswa yang memesan tiket..."
+                      value={customDeskripsi}
+                      onChange={(e) => setCustomDeskripsi(e.target.value)}
+                      required
+                      className="w-full bg-white border-2 border-glacier-navy rounded-xl p-3 text-xs font-bold text-glacier-navy placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-400"
+                    />
+                  </div>
+
+                  {/* Durasi Film */}
+                  <div>
+                    <label className="block text-xs font-black uppercase text-glacier-navy mb-1">
+                      Estimasi Durasi Film (Menit)
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        min="15"
+                        max="360"
+                        value={customDurasi}
+                        onChange={(e) => setCustomDurasi(Number(e.target.value))}
+                        className="w-full bg-white border-2 border-glacier-navy rounded-xl pl-3.5 pr-16 py-2 text-xs font-bold text-glacier-navy focus:outline-none focus:ring-2 focus:ring-sky-400"
+                      />
+                      <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500">
+                        Menit
+                      </span>
                     </div>
                   </div>
-                )}
+                </div>
 
                 {/* ----------------- SECTION: JADWAL & KAPASITAS ----------------- */}
                 <div className="space-y-3 p-3.5 sm:p-4 bg-slate-50 border-2 border-slate-200 rounded-2xl">

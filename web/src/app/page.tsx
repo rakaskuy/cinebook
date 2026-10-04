@@ -102,16 +102,18 @@ export default function HomePage() {
           const todayStr = new Date().toISOString().split('T')[0];
           setSelectedDate(dates.includes(todayStr) ? todayStr : dates[0]);
         } else if (isMounted) {
-          const todayStr = new Date().toISOString().split('T')[0];
-          setAvailableDates([todayStr]);
-          setSelectedDate(todayStr);
+          setAvailableDates([]);
+          setSelectedDate('');
+          setSessions([]);
+          setLoading(false);
         }
       } catch (err) {
         console.error('Failed to load session dates:', err);
-        const todayStr = new Date().toISOString().split('T')[0];
         if (isMounted) {
-          setAvailableDates([todayStr]);
-          setSelectedDate(todayStr);
+          setAvailableDates([]);
+          setSelectedDate('');
+          setSessions([]);
+          setLoading(false);
         }
       }
     }
@@ -451,34 +453,36 @@ export default function HomePage() {
           />
 
           {/* Date Selector Segmented Control with Spring Interaction */}
-          <div className="flex flex-wrap items-center gap-1 bg-slate-100/90 p-1 rounded-xl border border-slate-200/80 self-start sm:self-auto">
-            {availableDates.map((dateStr) => {
-              const isSelected = selectedDate === dateStr;
-              return (
-                <motion.button
-                  key={dateStr}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.97 }}
-                  onClick={() => setSelectedDate(dateStr)}
-                  className={`relative px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
-                    isSelected ? 'text-slate-900' : 'text-slate-500 hover:text-slate-800'
-                  }`}
-                >
-                  {isSelected && (
-                    <motion.div
-                      layoutId="active-date-pill"
-                      className="absolute inset-0 bg-white rounded-lg shadow-sm"
-                      transition={{ type: 'spring', stiffness: 450, damping: 32 }}
-                    />
-                  )}
-                  <span className="relative z-10 flex items-center gap-1.5">
-                    <Calendar className="w-3.5 h-3.5 text-sky-600" />
-                    {formatDateLabel(dateStr)}
-                  </span>
-                </motion.button>
-              );
-            })}
-          </div>
+          {availableDates.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1 bg-slate-100/90 p-1 rounded-xl border border-slate-200/80 self-start sm:self-auto">
+              {availableDates.map((dateStr) => {
+                const isSelected = selectedDate === dateStr;
+                return (
+                  <motion.button
+                    key={dateStr}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.97 }}
+                    onClick={() => setSelectedDate(dateStr)}
+                    className={`relative px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                      isSelected ? 'text-slate-900' : 'text-slate-500 hover:text-slate-800'
+                    }`}
+                  >
+                    {isSelected && (
+                      <motion.div
+                        layoutId="active-date-pill"
+                        className="absolute inset-0 bg-white rounded-lg shadow-sm"
+                        transition={{ type: 'spring', stiffness: 450, damping: 32 }}
+                      />
+                    )}
+                    <span className="relative z-10 flex items-center gap-1.5">
+                      <Calendar className="w-3.5 h-3.5 text-sky-600" />
+                      {formatDateLabel(dateStr)}
+                    </span>
+                  </motion.button>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Sessions List */}
@@ -494,7 +498,9 @@ export default function HomePage() {
               Belum Ada Jadwal Penayangan
             </h3>
             <p className="text-xs text-slate-500 max-w-sm mx-auto leading-relaxed">
-              Panitia OSIS belum menambahkan jadwal pemutaran film untuk tanggal ini. Silakan pilih tanggal lain.
+              {availableDates.length > 0
+                ? 'Panitia OSIS belum menambahkan jadwal pemutaran film untuk tanggal ini. Silakan pilih tanggal lain.'
+                : 'Panitia OSIS belum menambahkan jadwal pemutaran film di sistem festival. Silakan cek kembali nanti.'}
             </p>
           </div>
         ) : (

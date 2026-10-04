@@ -35,29 +35,7 @@ export const supabaseAdmin = (isSupabaseConfigured && supabaseServiceKey)
 // =============================================================================
 // Standalone Interactive Mock Fallback Store - Cinemanik Edition
 // =============================================================================
-const mockFilms: Film[] = [
-  {
-    id: '11111111-1111-1111-1111-111111111111',
-    judul: 'Interstellar: Ekspedisi Planet Es Mann',
-    deskripsi: 'Penjelajahan melintasi wormhole menuju planet gletser es tanpa batas demi masa depan peradaban. Visual spektakuler dingin dan audio bioskop menggelegar!',
-    durasi_menit: 169,
-    poster_path: 'https://images.unsplash.com/photo-1517411032315-54ef2cb783bb?q=80&w=800&auto=format&fit=crop',
-  },
-  {
-    id: '22222222-2222-2222-2222-222222222222',
-    judul: 'Frozen Spirit: Misteri Lembah Salju Magis',
-    deskripsi: 'Petualangan magis melintasi lembah kristal es dan mata air beku yang memukau dengan pesan persahabatan yang menghangatkan hati.',
-    durasi_menit: 125,
-    poster_path: 'https://images.unsplash.com/photo-1491555103944-7c647fd857e6?q=80&w=800&auto=format&fit=crop',
-  },
-  {
-    id: '33333333-3333-3333-3333-333333333333',
-    judul: 'Spider-Man: Blizzard Across The Glacial-Verse',
-    deskripsi: 'Aksi Miles Morales melintasi dimensi kutub es dan badai salju futuristik bersama para pahlawan jaring laba-laba lintas semesta.',
-    durasi_menit: 140,
-    poster_path: 'https://images.unsplash.com/photo-1531366936337-7c912a4589a7?q=80&w=800&auto=format&fit=crop',
-  },
-];
+const mockFilms: Film[] = [];
 
 const mockPackages: Package[] = [
   {
@@ -93,126 +71,9 @@ const mockPackages: Package[] = [
 const getTodayStr = () => new Date().toISOString().split('T')[0];
 const getTomorrowStr = () => new Date(Date.now() + 86400000).toISOString().split('T')[0];
 
-let mockSessions: Session[] = [
-  {
-    id: 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee',
-    tanggal: getTodayStr(),
-    jam_mulai: '13:30:00',
-    film_id: mockFilms[0].id,
-    kuota_total: 60,
-    kuota_terisi: 4,
-    status_sesi: 'AKTIF',
-    films: mockFilms[0],
-  },
-  {
-    id: 'ffffffff-ffff-ffff-ffff-ffffffffffff',
-    tanggal: getTodayStr(),
-    jam_mulai: '16:30:00',
-    film_id: mockFilms[1].id,
-    kuota_total: 50,
-    kuota_terisi: 2,
-    status_sesi: 'AKTIF',
-    films: mockFilms[1],
-  },
-  {
-    id: '99999999-9999-9999-9999-999999999999',
-    tanggal: getTodayStr(),
-    jam_mulai: '19:45:00',
-    film_id: mockFilms[2].id,
-    kuota_total: 70,
-    kuota_terisi: 0,
-    status_sesi: 'AKTIF',
-    films: mockFilms[2],
-  },
-  {
-    id: '88888888-8888-8888-8888-888888888888',
-    tanggal: getTomorrowStr(),
-    jam_mulai: '14:00:00',
-    film_id: mockFilms[0].id,
-    kuota_total: 60,
-    kuota_terisi: 0,
-    status_sesi: 'AKTIF',
-    films: mockFilms[0],
-  },
-];
+let mockSessions: Session[] = [];
 
-let mockBookings: Record<string, any> = {
-  'CIN-20260922-A9F4': {
-    id: 'mock-uuid-101',
-    kode_booking: 'CIN-20260922-A9F4',
-    nama_lengkap: 'Ahmad Fauzi',
-    kelas: 'XI MIPA 2',
-    email: 'ahmad.fauzi@sman1kendal.sch.id',
-    status: 'PENDING',
-    total_harga: 45000,
-    created_at: new Date().toISOString(),
-    expired_at: new Date(Date.now() + 22 * 3600 * 1000).toISOString(),
-    acc_at: null,
-    used_at: null,
-    decline_count: 0,
-    film_judul: 'Interstellar: Ekspedisi Planet Es Mann',
-    film_deskripsi: 'Penjelajahan melintasi wormhole menuju planet gletser es tanpa batas demi masa depan peradaban...',
-    durasi_menit: 169,
-    poster_path: 'https://images.unsplash.com/photo-1517411032315-54ef2cb783bb?q=80&w=800&auto=format&fit=crop',
-    session_id: 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee',
-    tanggal: getTodayStr(),
-    jam_mulai: '13:30:00',
-    nama_paket: 'Glacier Couple Combo (2 Orang + Hot Popcorn)',
-    jumlah_orang: 2,
-    qr_payload: 'CB1.Q0lOLTIwMjYwOTIyLUE5RjR8bW9jay11dWlkLTEwMXxhaG1hZC5mYXV6aUBzbWFuMWtlbmRhbC5zY2guaWR8MTczMDAwMDAwMA.mock_signature_a9f4',
-  },
-  'CIN-20260922-K7X2': {
-    id: 'mock-uuid-102',
-    kode_booking: 'CIN-20260922-K7X2',
-    nama_lengkap: 'Siti Sarah Wardhani',
-    kelas: 'XII MIPA 1',
-    email: 'siti.sarah@sman1kendal.sch.id',
-    status: 'ACC',
-    total_harga: 25000,
-    created_at: new Date().toISOString(),
-    expired_at: new Date(Date.now() + 20 * 3600 * 1000).toISOString(),
-    acc_at: new Date().toISOString(),
-    acc_by_name: 'Bima Kasir (OSIS Cinemanik)',
-    used_at: null,
-    decline_count: 0,
-    film_judul: 'Spider-Man: Blizzard Across The Glacial-Verse',
-    film_deskripsi: 'Miles Morales melintasi dimensi kutub es dan badai salju futuristik...',
-    durasi_menit: 140,
-    poster_path: 'https://images.unsplash.com/photo-1531366936337-7c912a4589a7?q=80&w=800&auto=format&fit=crop',
-    session_id: '99999999-9999-9999-9999-999999999999',
-    tanggal: getTodayStr(),
-    jam_mulai: '19:45:00',
-    nama_paket: 'Frost Solo Pass (1 Orang)',
-    jumlah_orang: 1,
-    qr_payload: 'CB1.Q0lOLTIwMjYwOTIyLUs3WDJ8bW9jay11dWlkLTEwMnxzaXRpLnNhcmFoQHNtYW4xa2VuZGFsLnNjaC5pZHwxNzMwMDAwMDAw.mock_signature_k7x2',
-  },
-  'CIN-20260922-W9M3': {
-    id: 'mock-uuid-103',
-    kode_booking: 'CIN-20260922-W9M3',
-    nama_lengkap: 'Dimas Wicaksono',
-    kelas: 'XI IPS 3',
-    email: 'dimas.w@sman1kendal.sch.id',
-    status: 'USED',
-    total_harga: 80000,
-    created_at: new Date().toISOString(),
-    expired_at: new Date().toISOString(),
-    acc_at: new Date().toISOString(),
-    acc_by_name: 'Bima Kasir (OSIS Cinemanik)',
-    used_at: new Date().toISOString(),
-    used_by_name: 'Eko Petugas Gate (OSIS Cinemanik)',
-    decline_count: 0,
-    film_judul: 'Frozen Spirit: Misteri Lembah Salju Magis',
-    film_deskripsi: 'Petualangan magis melintasi lembah kristal es dan mata air beku yang memukau...',
-    durasi_menit: 125,
-    poster_path: 'https://images.unsplash.com/photo-1491555103944-7c647fd857e6?q=80&w=800&auto=format&fit=crop',
-    session_id: 'ffffffff-ffff-ffff-ffff-ffffffffffff',
-    tanggal: getTodayStr(),
-    jam_mulai: '16:30:00',
-    nama_paket: 'Blizzard Squad Feast (4 Orang + Winter Feast)',
-    jumlah_orang: 4,
-    qr_payload: 'CB1.Q0lOLTIwMjYwOTIyLVc5TTN8bW9jay11dWlkLTEwM3xkaW1hcy53QHNtYW4xa2VuZGFsLnNjaC5pZHwxNzMwMDAwMDAw.mock_signature_w9m3',
-  },
-};
+let mockBookings: Record<string, any> = {};
 
 export function getStoredMockBookings(): Record<string, any> {
   if (typeof window === 'undefined') return mockBookings;
@@ -294,16 +155,20 @@ export async function fetchAvailableSessionDates(): Promise<string[]> {
     .map((s) => String(s.tanggal));
 
   if (isSupabaseConfigured && supabase) {
-    const { data, error } = await supabase
-      .from('sessions')
-      .select('tanggal')
-      .eq('status_sesi', 'AKTIF')
-      .order('tanggal', { ascending: true });
+    try {
+      const { data, error } = await supabase
+        .from('sessions')
+        .select('tanggal')
+        .eq('status_sesi', 'AKTIF')
+        .order('tanggal', { ascending: true });
 
-    if (!error && data && data.length > 0) {
-      const dbDates = data.map((item: any) => String(item.tanggal));
-      const dates = Array.from(new Set<string>([...dbDates, ...customDates])).sort();
-      return dates;
+      if (!error && data) {
+        const dbDates = data.map((item: any) => String(item.tanggal));
+        const dates = Array.from(new Set<string>([...dbDates, ...customDates])).sort();
+        return dates;
+      }
+    } catch (e) {
+      console.error('Error fetching session dates:', e);
     }
   }
 
@@ -312,7 +177,7 @@ export async function fetchAvailableSessionDates(): Promise<string[]> {
     .filter((s) => s.status_sesi === 'AKTIF')
     .map((s) => s.tanggal);
   const allDates = Array.from(new Set<string>([...mockDates, ...customDates])).sort();
-  return allDates.length > 0 ? allDates : [getTodayStr(), getTomorrowStr()];
+  return allDates;
 }
 
 export async function fetchSessions(selectedDate?: string): Promise<Session[]> {
@@ -473,17 +338,7 @@ export async function executeCreateBooking(payload: {
   // Interactive Mock & Custom Session store
   let targetSession = customSession || mockSessions.find((s) => s.id === payload.sessionId);
   if (!targetSession) {
-    targetSession = {
-      id: payload.sessionId,
-      tanggal: getTodayStr(),
-      jam_mulai: '13:30:00',
-      film_id: mockFilms[0].id,
-      kuota_total: 60,
-      kuota_terisi: 0,
-      status_sesi: 'AKTIF',
-      films: mockFilms[0],
-    };
-    mockSessions.push(targetSession);
+    throw new Error('Sesi penayangan film tidak ditemukan.');
   }
 
   let targetPkg = mockPackages.find((p) => p.id === payload.packageId);

@@ -17,6 +17,7 @@ import {
   getStoredAdminSession,
   clearAdminSession,
 } from '@/lib/adminAuth';
+import { supabase } from '@/lib/supabase';
 
 export function AdminNavbar() {
   const pathname = usePathname();
@@ -27,8 +28,13 @@ export function AdminNavbar() {
     setAdmin(getStoredAdminSession());
   }, [pathname]);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     clearAdminSession();
+    if (supabase) {
+      try {
+        await supabase.auth.signOut();
+      } catch {}
+    }
     router.push('/woylahpakcik/login/admin');
   };
 
