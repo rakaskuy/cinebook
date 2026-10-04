@@ -202,7 +202,7 @@ BEGIN
     END IF;
 
     -- Check if session matches today
-    v_today_match := (v_booking.tanggal = CURRENT_DATE);
+    v_today_match := (v_booking.tanggal = (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Jakarta')::date);
 
     -- 4. Calculate available actions based on role and current status
     IF v_admin_role = 'kasir' THEN
@@ -415,7 +415,7 @@ BEGIN
             END IF;
 
             -- Validate session schedule date is today
-            IF v_booking.session_tanggal != CURRENT_DATE THEN
+            IF v_booking.session_tanggal != (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Jakarta')::date THEN
                 RAISE EXCEPTION 'Gagal ACC Masuk: Tanggal sesi film ini adalah %, bukan hari ini!',
                     to_char(v_booking.session_tanggal, 'DD/MM/YYYY');
             END IF;

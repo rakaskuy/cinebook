@@ -310,28 +310,20 @@ export async function executeCreateBooking(payload: {
   const isCustom = Boolean(customSession || payload.sessionId.startsWith('sess-'));
 
   if (!isCustom && isSupabaseConfigured && supabase) {
-    try {
-      const { data, error } = await supabase.rpc('create_booking', {
-        p_session_id: payload.sessionId,
-        p_package_id: payload.packageId,
-        p_nama_lengkap: payload.namaLengkap,
-        p_kelas: payload.kelas,
-        p_email: payload.email,
-      });
+    const { data, error } = await supabase.rpc('create_booking', {
+      p_session_id: payload.sessionId,
+      p_package_id: payload.packageId,
+      p_nama_lengkap: payload.namaLengkap,
+      p_kelas: payload.kelas,
+      p_email: payload.email,
+    });
 
-      if (error) {
-        if (error.message.includes('sudah berlangsung') || error.message.includes('syntax for type uuid')) {
-          console.warn('Sesi database tidak kompatibel RPC, beralih ke reservasi interaktif.');
-        } else {
-          throw new Error(error.message);
-        }
-      } else {
-        return data;
-      }
-    } catch (err: any) {
-      if (!err.message?.includes('sudah berlangsung') && !err.message?.includes('syntax for type uuid')) {
-        throw err;
-      }
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    if (data) {
+      return data;
     }
   }
 

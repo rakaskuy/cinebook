@@ -30,7 +30,7 @@ AS $$
 DECLARE
     v_chars text := '23456789ABCDEFGHJKLMNPQRSTUVWXYZ'; -- Unambiguous characters (no 0/O, 1/I)
     v_random_str text := '';
-    v_date_str text := to_char(CURRENT_DATE, 'YYYYMMDD');
+    v_date_str text := to_char((CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Jakarta')::date, 'YYYYMMDD');
     v_i integer;
 BEGIN
     FOR v_i IN 1..4 LOOP
@@ -156,10 +156,9 @@ BEGIN
         RAISE EXCEPTION 'Sesi ini sudah ditutup untuk pemesanan!';
     END IF;
 
-    -- Check if session schedule has already passed
-    IF (v_session.tanggal < CURRENT_DATE) OR
-       (v_session.tanggal = CURRENT_DATE AND v_session.jam_mulai <= CURRENT_TIME) THEN
-        RAISE EXCEPTION 'Sesi film ini telah selesai atau sedang berlangsung!';
+    -- Allow booking as long as session date is not in the past (WIB)
+    IF v_session.tanggal < (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Jakarta')::date THEN
+        RAISE EXCEPTION 'Tanggal penayangan sesi film ini sudah berlalu!';
     END IF;
 
     -- 4. Strict atomic quota validation
@@ -180,7 +179,7 @@ BEGIN
         v_retry_count := v_retry_count + 1;
         IF v_retry_count >= v_max_retries THEN
             -- Add microsecond entropy in worst-case collision scenario
-            v_kode_booking := 'CIN-' || to_char(CURRENT_DATE, 'YYYYMMDD') || '-' ||
+            v_kode_booking := 'CIN-' || to_char((CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Jakarta')::date, 'YYYYMMDD') || '-' ||
                               substr(md5(random()::text || clock_timestamp()::text), 1, 4);
             EXIT;
         END IF;

@@ -162,7 +162,7 @@ RETURNS text LANGUAGE plpgsql AS $$
 DECLARE
     v_chars text := '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
     v_random_str text := '';
-    v_date_str text := to_char(CURRENT_DATE, 'YYYYMMDD');
+    v_date_str text := to_char((CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Jakarta')::date, 'YYYYMMDD');
     v_i integer;
 BEGIN
     FOR v_i IN 1..4 LOOP
@@ -384,9 +384,9 @@ BEGIN
     IF NOT FOUND THEN RAISE EXCEPTION 'Sesi tidak ditemukan!'; END IF;
     IF v_session.status_sesi != 'AKTIF' THEN RAISE EXCEPTION 'Sesi ditutup!'; END IF;
 
-    IF (v_session.tanggal < CURRENT_DATE) OR
-       (v_session.tanggal = CURRENT_DATE AND v_session.jam_mulai <= CURRENT_TIME) THEN
-        RAISE EXCEPTION 'Sesi film ini sudah berlangsung!';
+    -- Allow booking as long as session date is not in the past (WIB)
+    IF v_session.tanggal < (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Jakarta')::date THEN
+        RAISE EXCEPTION 'Tanggal penayangan sesi film ini sudah berlalu!';
     END IF;
 
     IF (v_session.kuota_terisi + v_package.jumlah_orang) > v_session.kuota_total THEN
@@ -401,7 +401,7 @@ BEGIN
         EXIT WHEN NOT v_code_found;
         v_retry_count := v_retry_count + 1;
         IF v_retry_count >= 5 THEN
-            v_kode_booking := 'CIN-' || to_char(CURRENT_DATE, 'YYYYMMDD') || '-' ||
+            v_kode_booking := 'CIN-' || to_char((CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Jakarta')::date, 'YYYYMMDD') || '-' ||
                               substr(md5(random()::text || clock_timestamp()::text), 1, 4);
             EXIT;
         END IF;
@@ -496,7 +496,7 @@ BEGIN
         );
     END IF;
 
-    v_today_match := (v_booking.tanggal = CURRENT_DATE);
+    v_today_match := (v_booking.tanggal = (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Jakarta')::date);
 
     IF v_admin_role = 'kasir' THEN
         IF v_booking.status = 'PENDING' THEN
@@ -658,7 +658,7 @@ BEGIN
             IF v_status_sebelum != 'ACC' THEN
                 RAISE EXCEPTION 'Hanya tiket ACC yang bisa diizinkan masuk gate!';
             END IF;
-            IF v_booking.session_tanggal != CURRENT_DATE THEN
+            IF v_booking.session_tanggal != (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Jakarta')::date THEN
                 RAISE EXCEPTION 'Tanggal sesi film bukan hari ini!';
             END IF;
 
