@@ -1,0 +1,41 @@
+{
+  "expo": {
+    "name": "CineBook Admin",
+    "slug": "cinebook-admin",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "backgroundColor": "#FFE600",
+      "resizeMode": "contain"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.cinebook.admin",
+      "infoPlist": {
+        "NSCameraUsageDescription": "CineBook membutuhkan akses kamera untuk memindai QR Code tiket bioskop."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#FFE600"
+      },
+      "package": "com.cinebook.admin",
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.VIBRATE"
+      ]
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "CineBook membutuhkan izin kamera untuk memindai QR Code e-ticket penonton."
+        }
+      ],
+      "expo-secure-store"
+    ],
+    "scheme": "cinebookadmin"
+  }
+}

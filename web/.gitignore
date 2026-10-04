@@ -1,0 +1,21 @@
+# Next.js build
+.next/
+out/
+build/
+dist/
+
+# Dependencies
+node_modules/
+
+# Secrets
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.local
+
+# System & Tooling
+.DS_Store
+*.pem
+.claude/
