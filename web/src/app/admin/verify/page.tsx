@@ -175,7 +175,7 @@ export default function KasirVerifyPage() {
         const scanner = new Html5Qrcode(qrRegionId, {
           verbose: false,
           experimentalFeatures: {
-            useBarCodeDetectorIfSupported: true,
+            useBarCodeDetectorIfSupported: false,
           },
         });
         html5QrCodeRef.current = scanner;
@@ -189,7 +189,7 @@ export default function KasirVerifyPage() {
           const now = Date.now();
           if (
             lastScannedTicketRef.current === cleanText &&
-            now - lastScannedTimeRef.current < 7000
+            now - lastScannedTimeRef.current < 2500
           ) {
             return;
           }
@@ -207,35 +207,25 @@ export default function KasirVerifyPage() {
             if (res.success) {
               loadQueue();
             }
-
-            setTimeout(() => {
-              setLastScannedResult(null);
-              scanningActiveRef.current = true;
-              setScanningActive(true);
-            }, 3000);
           } catch (err: any) {
             playScanChime(false);
             setLastScannedResult({
               success: false,
               message: err.message || 'QR Code tidak valid atau rusak.',
             });
+          } finally {
             setTimeout(() => {
               setLastScannedResult(null);
               scanningActiveRef.current = true;
               setScanningActive(true);
-            }, 3000);
+            }, 1800);
           }
         };
 
         await scanner.start(
           { facingMode: 'environment' },
           {
-            fps: 25,
-            qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
-              const minDim = Math.min(viewfinderWidth, viewfinderHeight);
-              const box = Math.max(Math.floor(minDim * 0.72), 220);
-              return { width: box, height: box };
-            },
+            fps: 20,
           },
           qrCodeSuccessCallback,
           undefined

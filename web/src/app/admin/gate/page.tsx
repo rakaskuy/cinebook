@@ -167,7 +167,7 @@ export default function GateScanPage() {
         const scanner = new Html5Qrcode(qrRegionId, {
           verbose: false,
           experimentalFeatures: {
-            useBarCodeDetectorIfSupported: true,
+            useBarCodeDetectorIfSupported: false,
           },
         });
         html5QrCodeRef.current = scanner;
@@ -176,13 +176,6 @@ export default function GateScanPage() {
           { facingMode: 'environment' },
           {
             fps: 20,
-            qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
-              const edge = Math.min(viewfinderWidth, viewfinderHeight);
-              return {
-                width: Math.floor(edge * 0.72),
-                height: Math.floor(edge * 0.72),
-              };
-            },
           },
           (decoded: string) => {
             if (handleDecodedRef.current) {
@@ -223,11 +216,11 @@ export default function GateScanPage() {
     // Mutex lock to stop redundant frame callbacks
     if (isProcessingScanRef.current) return;
 
-    // Anti-spam lock: if the same ticket is still held in front of the lens, ignore repeat frames
+    // Anti-spam lock: prevent repeat scans of the exact same QR while held in frame
     const now = Date.now();
     if (
       lastScannedTicketRef.current === cleanText &&
-      now - lastScannedTimeRef.current < 6000
+      now - lastScannedTimeRef.current < 2500
     ) {
       return;
     }
@@ -290,6 +283,9 @@ export default function GateScanPage() {
       }, 5000);
     } finally {
       setLoading(false);
+      setTimeout(() => {
+        isProcessingScanRef.current = false;
+      }, 1500);
     }
   };
 

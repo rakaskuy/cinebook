@@ -542,14 +542,15 @@ export async function executeRegisterCashierScan(
   const trimmed = qrPayloadOrCode.trim();
 
   if (isSupabaseConfigured && supabase) {
-    try {
-      const { data, error } = await supabase.rpc('register_cashier_scan', {
-        p_qr_payload: trimmed,
-      });
-      if (!error && data && data.success) {
-        return data;
-      }
-    } catch {}
+    const { data, error } = await supabase.rpc('register_cashier_scan', {
+      p_qr_payload: trimmed,
+    });
+    if (error) {
+      throw new Error(error.message);
+    }
+    if (data) {
+      return data;
+    }
   }
 
   // Mock & Local fallback
@@ -569,7 +570,7 @@ export async function executeRegisterCashierScan(
 
   const allBookings = getStoredMockBookings();
   const b = allBookings[targetCode];
-  if (!b) return { success: false, message: 'Tiket tidak ditemukan.' };
+  if (!b) return { success: false, message: 'Tiket tidak ditemukan di sistem.' };
   b.last_scanned_at = new Date().toISOString();
   saveStoredMockBooking(targetCode, b);
 
@@ -583,7 +584,7 @@ export async function executeRegisterCashierScan(
     jumlah_orang: b.jumlah_orang,
     total_harga: b.total_harga,
     status: b.status,
-    message: 'QR Berhasil Di-scan! Data telah dikirim ke HP Kasir.',
+    message: 'QR Berhasil Di-scan! Data telah dikirim ke antrean Kasir.',
   };
 }
 
@@ -615,13 +616,7 @@ export async function fetchCashierQueue(): Promise<CashierQueueItem[]> {
     try {
       const { data, error } = await supabase.rpc('get_cashier_queue');
       if (!error && Array.isArray(data)) {
-        const combined = [...data];
-        for (const item of localQueue) {
-          if (!combined.some((c: any) => c.kode_booking === item.kode_booking)) {
-            combined.push(item);
-          }
-        }
-        return combined.sort((a, b) => (b.last_scanned_at ? 1 : 0) - (a.last_scanned_at ? 1 : 0));
+        return data;
       }
     } catch (e) {
       console.error('Error fetching cashier queue:', e);
@@ -639,15 +634,17 @@ export async function executeAdminScanPreview(
   const trimmed = qrPayloadOrCode.trim();
 
   if (isSupabaseConfigured && supabase) {
-    try {
-      const { data, error } = await supabase.rpc('scan_qr_preview', {
-        p_qr_payload: trimmed,
-      });
+    const { data, error } = await supabase.rpc('scan_qr_preview', {
+      p_qr_payload: trimmed,
+    });
 
-      if (!error && data && data.success) {
-        return data;
-      }
-    } catch {}
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    if (data) {
+      return data;
+    }
   }
 
   // Interactive Mock & Local fallback
@@ -761,17 +758,18 @@ export async function executeAdminSubmitDecision(
   const cleanCode = kodeBooking.trim().toUpperCase();
 
   if (isSupabaseConfigured && supabase) {
-    try {
-      const { data, error } = await supabase.rpc('submit_admin_decision', {
-        p_kode_booking: cleanCode,
-        p_decision: decision,
-        p_alasan: alasan || null,
-      });
+    const { data, error } = await supabase.rpc('submit_admin_decision', {
+      p_kode_booking: cleanCode,
+      p_decision: decision,
+      p_alasan: alasan || null,
+    });
 
-      if (!error && data && data.success) {
-        return data;
-      }
-    } catch {}
+    if (error) {
+      throw new Error(error.message);
+    }
+    if (data) {
+      return data;
+    }
   }
 
   // Interactive Mock & Local fallback
