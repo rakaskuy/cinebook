@@ -5,7 +5,7 @@ import { IntroSplash } from '@/components/IntroSplash';
 import { AppChrome } from '@/components/AppChrome';
 
 export const metadata: Metadata = {
-  title: 'Cinemanik 2026 — Festival Bioskop Es & Gletser SMAN 1 Kendal',
+  title: 'Cinemanik 2026: Festival Bioskop Es & Gletser SMAN 1 Kendal',
   description: 'Pesan tiket film bertema gletser es kegiatan OSIS SMA Negeri 1 Kendal secara instan dengan E-Ticket QR kristal terverifikasi, bayar offline ke panitia.',
 };
 

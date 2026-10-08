@@ -459,6 +459,7 @@ export default function KasirVerifyPage() {
                   <button
                     type="button"
                     onClick={toggleFullscreen}
+                    aria-label={isFullscreen ? 'Keluar Layar Penuh' : 'Mode Layar Penuh'}
                     className="p-1.5 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100 text-slate-700 transition-colors"
                     title={isFullscreen ? 'Keluar Layar Penuh' : 'Mode Layar Penuh'}
                   >
