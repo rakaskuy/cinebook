@@ -157,7 +157,7 @@ export default function KasirVerifyPage() {
       }
 
       try {
-        const { Html5Qrcode } = await import('html5-qrcode');
+        const { Html5Qrcode, Html5QrcodeSupportedFormats } = await import('html5-qrcode');
         if (!isMounted) return;
 
         const qrRegionId = 'reader-verify-container';
@@ -173,9 +173,10 @@ export default function KasirVerifyPage() {
         if (!isMounted) return;
 
         const scanner = new Html5Qrcode(qrRegionId, {
+          formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
           verbose: false,
           experimentalFeatures: {
-            useBarCodeDetectorIfSupported: false,
+            useBarCodeDetectorIfSupported: true,
           },
         });
         html5QrCodeRef.current = scanner;
@@ -189,7 +190,7 @@ export default function KasirVerifyPage() {
           const now = Date.now();
           if (
             lastScannedTicketRef.current === cleanText &&
-            now - lastScannedTimeRef.current < 2500
+            now - lastScannedTimeRef.current < 2000
           ) {
             return;
           }
@@ -218,7 +219,7 @@ export default function KasirVerifyPage() {
               setLastScannedResult(null);
               scanningActiveRef.current = true;
               setScanningActive(true);
-            }, 1800);
+            }, 1200);
           }
         };
 
@@ -226,6 +227,11 @@ export default function KasirVerifyPage() {
           { facingMode: 'environment' },
           {
             fps: 20,
+            qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
+              const minDim = Math.min(viewfinderWidth, viewfinderHeight);
+              const box = Math.max(Math.floor(minDim * 0.75), 220);
+              return { width: box, height: box };
+            },
           },
           qrCodeSuccessCallback,
           undefined

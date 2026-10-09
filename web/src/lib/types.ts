@@ -87,3 +87,24 @@ export interface CreateSessionPayload {
   customDurasiMenit?: number;
   customPosterPath?: string;
 }
+
+export interface GateQueueItem {
+  id: string;
+  kode_booking: string;
+  nama_lengkap: string;
+  kelas: string;
+  email: string;
+  total_harga: number;
+  status: string;
+  created_at: string;
+  acc_at?: string | null;
+  last_scanned_at?: string | null;
+  decline_count: number;
+  film_judul: string;
+  nama_paket: string;
+  jumlah_orang: number;
+  tanggal: string;
+  jam_mulai: string;
+  is_session_today: boolean;
+  is_recently_scanned: boolean;
+}

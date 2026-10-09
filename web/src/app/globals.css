@@ -207,7 +207,7 @@ html[data-intro-skip='1'] [data-intro-overlay] {
   height: 100% !important;
   max-width: 100% !important;
   max-height: 100% !important;
-  object-fit: contain !important;
+  object-fit: cover !important;
   display: block !important;
   z-index: 1 !important;
 }

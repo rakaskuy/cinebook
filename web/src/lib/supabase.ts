@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { Film, Session, Package, BookingDetailResponse, AdminRole, CreateSessionPayload } from './types';
+import { Film, Session, Package, BookingDetailResponse, AdminRole, CreateSessionPayload, GateQueueItem } from './types';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
@@ -625,6 +625,105 @@ export async function fetchCashierQueue(): Promise<CashierQueueItem[]> {
 
   // Local/Mock fallback
   return localQueue.sort((a, b) => (b.last_scanned_at ? 1 : 0) - (a.last_scanned_at ? 1 : 0));
+}
+
+export async function fetchGateQueue(): Promise<GateQueueItem[]> {
+  const localBookings = getStoredMockBookings();
+  const localQueue: GateQueueItem[] = Object.values(localBookings)
+    .filter((b) => b.status === 'ACC')
+    .map((b) => ({
+      id: b.id,
+      kode_booking: b.kode_booking,
+      nama_lengkap: b.nama_lengkap,
+      kelas: b.kelas,
+      email: b.email,
+      total_harga: b.total_harga,
+      status: b.status,
+      created_at: b.created_at,
+      acc_at: b.acc_at || null,
+      last_scanned_at: b.last_scanned_at || null,
+      decline_count: b.decline_count || 0,
+      film_judul: b.film_judul,
+      nama_paket: b.nama_paket,
+      jumlah_orang: b.jumlah_orang,
+      tanggal: b.tanggal,
+      jam_mulai: b.jam_mulai,
+      is_session_today: b.tanggal === getTodayStr(),
+      is_recently_scanned: Boolean(b.last_scanned_at),
+    }));
+
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const { data, error } = await supabase.rpc('get_gate_queue');
+      if (!error && Array.isArray(data)) {
+        return data;
+      }
+      if (error) {
+        console.error('get_gate_queue error:', error.message);
+      }
+    } catch (e) {
+      console.error('Error fetching gate queue:', e);
+    }
+  }
+
+  return localQueue.sort((a, b) => (b.last_scanned_at ? 1 : 0) - (a.last_scanned_at ? 1 : 0));
+}
+
+export async function executeRegisterGateScan(
+  qrPayloadOrCode: string
+): Promise<{
+  success: boolean;
+  kode_booking?: string;
+  nama_lengkap?: string;
+  kelas?: string;
+  film_judul?: string;
+  nama_paket?: string;
+  jumlah_orang?: number;
+  status?: string;
+  tanggal?: string;
+  jam_mulai?: string;
+  is_session_today?: boolean;
+  message: string;
+}> {
+  const trimmed = qrPayloadOrCode.trim();
+
+  if (isSupabaseConfigured && supabase) {
+    const { data, error } = await supabase.rpc('register_gate_scan', {
+      p_qr_payload: trimmed,
+    });
+    if (error) {
+      throw new Error(error.message);
+    }
+    if (data) {
+      return data;
+    }
+  }
+
+  let targetCode = trimmed.toUpperCase();
+  if (trimmed.startsWith('CB1:')) {
+    const parts = trimmed.split(':');
+    if (parts.length >= 2) targetCode = parts[1].toUpperCase();
+  }
+  const allBookings = getStoredMockBookings();
+  const b = allBookings[targetCode];
+  if (!b) return { success: false, message: 'Tiket tidak ditemukan di sistem.' };
+  b.last_scanned_at = new Date().toISOString();
+  saveStoredMockBooking(targetCode, b);
+
+  return {
+    success: true,
+    kode_booking: b.kode_booking,
+    nama_lengkap: b.nama_lengkap,
+    kelas: b.kelas,
+    film_judul: b.film_judul,
+    nama_paket: b.nama_paket,
+    jumlah_orang: b.jumlah_orang,
+    status: b.status,
+    tanggal: b.tanggal,
+    jam_mulai: b.jam_mulai,
+    is_session_today: b.tanggal === getTodayStr(),
+    message: 'QR Berhasil Di-scan! Tiket siap diizinkan masuk.',
+  };
 }
 
 export async function executeAdminScanPreview(
