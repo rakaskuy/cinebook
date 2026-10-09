@@ -101,6 +101,11 @@ export default function KasirVerifyPage() {
   const [loadingQueue, setLoadingQueue] = useState(false);
   const [actionNotice, setActionNotice] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
+  // Active scanned ticket for instant laptop confirmation
+  const [activeTicket, setActiveTicket] = useState<any | null>(null);
+  const [manualCode, setManualCode] = useState('');
+  const [searchingManual, setSearchingManual] = useState(false);
+
   // Decline Modal states
   const [showDeclineModal, setShowDeclineModal] = useState(false);
   const [targetDeclineCode, setTargetDeclineCode] = useState<string | null>(null);
@@ -206,6 +211,7 @@ export default function KasirVerifyPage() {
             setLastScannedResult(res);
 
             if (res.success) {
+              setActiveTicket(res);
               loadQueue();
             }
           } catch (err: any) {
@@ -283,12 +289,15 @@ export default function KasirVerifyPage() {
   const handleAccBooking = async (kodeBooking: string) => {
     try {
       setSubmittingAction(true);
-      const res = await executeAdminSubmitDecision(kodeBooking, 'ACC');
+      await executeAdminSubmitDecision(kodeBooking, 'ACC');
       playScanChime(true);
       setActionNotice({
         type: 'success',
         text: `Tiket ${kodeBooking} berhasil di-ACC! Siswa kini dapat masuk gerbang.`,
       });
+      if (activeTicket && activeTicket.kode_booking === kodeBooking) {
+        setActiveTicket(null);
+      }
       loadQueue();
     } catch (err: any) {
       playScanChime(false);
@@ -316,6 +325,9 @@ export default function KasirVerifyPage() {
         type: 'success',
         text: `Tiket ${targetDeclineCode} ditolak: ${declineReason}`,
       });
+      if (activeTicket && activeTicket.kode_booking === targetDeclineCode) {
+        setActiveTicket(null);
+      }
       setShowDeclineModal(false);
       setTargetDeclineCode(null);
       setDeclineReason('');
@@ -324,6 +336,30 @@ export default function KasirVerifyPage() {
       alert(err.message || 'Gagal menolak tiket.');
     } finally {
       setSubmittingAction(false);
+    }
+  };
+
+  // 5. Handle Manual Booking Code Search in Kiosk View
+  const handleManualSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!manualCode.trim()) return;
+    setSearchingManual(true);
+    try {
+      const res = await executeRegisterCashierScan(manualCode.trim());
+      playScanChime(res.success);
+      setLastScannedResult(res);
+      if (res.success) {
+        setActiveTicket(res);
+        loadQueue();
+      }
+    } catch (err: any) {
+      playScanChime(false);
+      setLastScannedResult({
+        success: false,
+        message: err.message || 'Kode booking tidak ditemukan.',
+      });
+    } finally {
+      setSearchingManual(false);
     }
   };
 
@@ -580,7 +616,7 @@ export default function KasirVerifyPage() {
 
               {/* Status footer inside scanner box */}
               <div
-                className={`p-3 rounded-xl border text-xs flex items-center justify-between ${
+                className={`p-3 rounded-xl border text-xs flex items-center justify-between mt-3 ${
                   isFullscreen ? 'bg-slate-900 text-sky-200 border-slate-800' : 'bg-slate-50 text-slate-600 border-slate-200'
                 }`}
               >
@@ -592,7 +628,112 @@ export default function KasirVerifyPage() {
                   Auto-Reset
                 </span>
               </div>
+
+              {!isFullscreen && (
+                <form onSubmit={handleManualSearch} className="flex gap-2 mt-4">
+                  <input
+                    type="text"
+                    placeholder="Ketik kode booking (Contoh: CIN-20261010-XXXX)"
+                    value={manualCode}
+                    onChange={(e) => setManualCode(e.target.value)}
+                    className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs font-mono uppercase text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+                  />
+                  <button
+                    type="submit"
+                    disabled={searchingManual}
+                    className="bg-slate-900 hover:bg-sky-900 text-white font-semibold text-xs px-4 py-2 rounded-xl transition-all shadow-sm flex items-center gap-1.5"
+                  >
+                    <span>{searchingManual ? 'Memeriksa...' : 'Cek'}</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </form>
+              )}
             </div>
+
+            {/* Instant Action Card on Laptop for Cashier */}
+            {viewMode === 'kiosk' && (
+              <div className="pt-2">
+                {!activeTicket ? (
+                  <div className="bg-white border border-dashed border-slate-200 rounded-2xl p-8 text-center space-y-2">
+                    <Ticket className="w-8 h-8 text-sky-600 mx-auto" />
+                    <h3 className="font-serif text-sm font-medium text-slate-900">
+                      Arahkan QR Siswa ke Kamera / Masukkan Kode Booking
+                    </h3>
+                    <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                      Hasil pemindaian langsung dapat Anda setujui (ACC) di laptop atau via ponsel kasir.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm space-y-4">
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                      <div>
+                        <span className="text-[10px] font-medium text-slate-500 uppercase tracking-wider">
+                          Tiket Masuk Kasir
+                        </span>
+                        <div className="font-mono font-semibold text-base text-slate-900">
+                          {activeTicket.kode_booking}
+                        </div>
+                      </div>
+                      <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full border bg-amber-50 text-amber-800 border-amber-200">
+                        Menunggu Pembayaran
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-slate-700 bg-slate-50/70 p-3.5 rounded-xl border border-slate-200/80">
+                      <div>
+                        <span className="text-slate-500">Nama Siswa:</span>
+                        <p className="font-semibold text-slate-900">{activeTicket.nama_lengkap}</p>
+                      </div>
+                      <div>
+                        <span className="text-slate-500">Kelas:</span>
+                        <p className="font-medium text-slate-800">{activeTicket.kelas}</p>
+                      </div>
+                      <div>
+                        <span className="text-slate-500">Paket:</span>
+                        <p className="font-semibold text-slate-900">
+                          {activeTicket.nama_paket} ({activeTicket.jumlah_orang} Orang)
+                        </p>
+                      </div>
+                      <div>
+                        <span className="text-slate-500">Tagihan:</span>
+                        <p className="font-bold text-base font-mono text-slate-900">
+                          Rp {Number(activeTicket.total_harga || 0).toLocaleString('id-ID')}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2 pt-1">
+                      <button
+                        onClick={() => handleAccBooking(activeTicket.kode_booking)}
+                        disabled={submittingAction}
+                        className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs py-3 rounded-xl transition-all shadow-sm flex items-center justify-center gap-2"
+                      >
+                        <CheckCircle2 className="w-4 h-4" />
+                        <span>ACC Pembayaran (Rp {Number(activeTicket.total_harga || 0).toLocaleString('id-ID')})</span>
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          setTargetDeclineCode(activeTicket.kode_booking);
+                          setShowDeclineModal(true);
+                        }}
+                        disabled={submittingAction}
+                        className="px-4 py-3 bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold text-xs rounded-xl border border-rose-200 transition-colors"
+                      >
+                        Tolak
+                      </button>
+
+                      <button
+                        onClick={() => setActiveTicket(null)}
+                        className="px-4 py-3 bg-slate-50 hover:bg-slate-100 text-slate-700 font-semibold text-xs rounded-xl border border-slate-200 transition-colors"
+                      >
+                        Batal
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 
