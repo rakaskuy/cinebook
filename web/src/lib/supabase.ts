@@ -755,7 +755,19 @@ export async function executeAdminSubmitDecision(
   alasan?: string,
   role: AdminRole = 'kasir'
 ): Promise<{ success: boolean; message: string; status?: string }> {
-  const cleanCode = kodeBooking.trim().toUpperCase();
+  let cleanCode = kodeBooking.trim().toUpperCase();
+  if (cleanCode.startsWith('CB1:')) {
+    const parts = cleanCode.split(':');
+    if (parts.length >= 2) cleanCode = parts[1].toUpperCase();
+  } else if (cleanCode.startsWith('CB1.')) {
+    const parts = cleanCode.split('.');
+    if (parts.length === 3) {
+      try {
+        const decoded = atob(parts[1].replace(/-/g, '+').replace(/_/g, '/'));
+        cleanCode = decoded.split('|')[0].toUpperCase();
+      } catch {}
+    }
+  }
 
   if (isSupabaseConfigured && supabase) {
     const { data, error } = await supabase.rpc('submit_admin_decision', {

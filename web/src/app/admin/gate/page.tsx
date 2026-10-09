@@ -236,6 +236,9 @@ export default function GateScanPage() {
     try {
       const res = await executeAdminScanPreview(cleanText, 'gate');
       setPreviewData(res);
+      if (res.kode_booking) {
+        setScannedCode(res.kode_booking);
+      }
       const isApproved = Boolean(res.success && res.status === 'ACC' && res.is_session_today);
       playGateTone(isApproved);
 
@@ -302,6 +305,9 @@ export default function GateScanPage() {
     try {
       const res = await executeAdminScanPreview(manualCode.trim(), 'gate');
       setPreviewData(res);
+      if (res.kode_booking) {
+        setScannedCode(res.kode_booking);
+      }
       const isApproved = Boolean(res.success && res.status === 'ACC' && res.is_session_today);
       playGateTone(isApproved);
 
@@ -353,11 +359,12 @@ export default function GateScanPage() {
   };
 
   const handleGateDecision = async (decision: 'ACC' | 'DECLINE', reason?: string) => {
-    if (!previewData || !scannedCode) return;
+    const targetCode = previewData?.kode_booking || scannedCode;
+    if (!previewData || !targetCode) return;
     setSubmitting(true);
 
     try {
-      await executeAdminSubmitDecision(scannedCode, decision, reason, 'gate');
+      await executeAdminSubmitDecision(targetCode, decision, reason, 'gate');
 
       if (decision === 'ACC') {
         playGateTone(true);
