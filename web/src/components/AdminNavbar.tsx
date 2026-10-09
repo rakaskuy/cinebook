@@ -11,6 +11,7 @@ import {
   DoorOpen,
   CalendarDays,
   Snowflake,
+  Tag,
 } from 'lucide-react';
 import {
   AdminSession,
@@ -119,6 +120,18 @@ export function AdminNavbar() {
               >
                 <CalendarDays className="w-3.5 h-3.5" />
                 <span>Kelola Sesi</span>
+              </Link>
+
+              <Link
+                href="/admin/packages"
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all ${
+                  pathname === '/admin/packages'
+                    ? 'bg-slate-900 text-white shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                }`}
+              >
+                <Tag className="w-3.5 h-3.5" />
+                <span>Kelola Paket</span>
               </Link>
             </>
           )}

@@ -298,6 +298,50 @@ export async function fetchPackages(): Promise<Package[]> {
   return mockPackages;
 }
 
+export async function adminFetchAllPackages(): Promise<Package[]> {
+  if (isSupabaseConfigured && supabase) {
+    const { data, error } = await supabase.rpc('admin_get_packages');
+    if (!error && Array.isArray(data)) {
+      return data;
+    }
+    const { data: d2 } = await supabase.from('packages').select('*').order('jumlah_orang', { ascending: true });
+    if (d2) return d2;
+  }
+  return mockPackages;
+}
+
+export async function adminSavePackage(payload: {
+  id?: string;
+  nama_paket: string;
+  jumlah_orang: number;
+  harga: number;
+  is_active: boolean;
+}): Promise<{ success: boolean; message: string }> {
+  if (isSupabaseConfigured && supabase) {
+    const { data, error } = await supabase.rpc('admin_upsert_package', {
+      p_id: payload.id || null,
+      p_nama_paket: payload.nama_paket.trim(),
+      p_jumlah_orang: Number(payload.jumlah_orang),
+      p_harga: Number(payload.harga),
+      p_is_active: Boolean(payload.is_active),
+    });
+    if (error) throw new Error(error.message);
+    return data;
+  }
+  throw new Error('Supabase belum terkonfigurasi.');
+}
+
+export async function adminDeletePackage(id: string): Promise<{ success: boolean; message: string; deactivated?: boolean }> {
+  if (isSupabaseConfigured && supabase) {
+    const { data, error } = await supabase.rpc('admin_delete_package', {
+      p_id: id,
+    });
+    if (error) throw new Error(error.message);
+    return data;
+  }
+  throw new Error('Supabase belum terkonfigurasi.');
+}
+
 export async function executeCreateBooking(payload: {
   sessionId: string;
   packageId: string;

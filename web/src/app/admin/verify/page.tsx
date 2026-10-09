@@ -550,18 +550,22 @@ export default function KasirVerifyPage() {
                       animate={{ opacity: 1, scale: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.95, y: 16 }}
                       transition={{ type: 'spring', stiffness: 400, damping: 26 }}
-                      className={`absolute inset-4 sm:inset-6 z-20 rounded-2xl border p-6 flex flex-col items-center justify-center text-center shadow-2xl backdrop-blur-md ${
+                      className={`${
+                        isFullscreen
+                          ? 'fixed inset-4 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:max-w-md sm:w-full z-[100000]'
+                          : 'absolute inset-4 sm:inset-6 z-30'
+                      } rounded-3xl border p-6 flex flex-col items-center justify-center text-center shadow-2xl backdrop-blur-xl ${
                         lastScannedResult.success
-                          ? 'bg-white/95 border-emerald-300 text-slate-900'
-                          : 'bg-white/95 border-rose-300 text-rose-950'
+                          ? 'bg-white border-emerald-300 text-slate-900 shadow-emerald-500/10'
+                          : 'bg-white border-rose-300 text-rose-950 shadow-rose-500/10'
                       }`}
                     >
                       {lastScannedResult.success ? (
                         <>
-                          <div className="w-12 h-12 bg-emerald-50 border border-emerald-200 rounded-full flex items-center justify-center mb-3">
-                            <CheckCircle2 className="w-7 h-7 text-emerald-600" />
+                          <div className="w-14 h-14 bg-emerald-50 border border-emerald-200 rounded-full flex items-center justify-center mb-2.5">
+                            <CheckCircle2 className="w-8 h-8 text-emerald-600" />
                           </div>
-                          <span className="font-mono text-xs bg-slate-900 text-white px-2.5 py-0.5 rounded-md mb-2">
+                          <span className="font-mono text-xs font-bold bg-slate-900 text-white px-3 py-0.5 rounded-md mb-1.5">
                             {lastScannedResult.kode_booking}
                           </span>
                           <h2 className="font-serif text-xl sm:text-2xl font-medium tracking-tight text-slate-900">
@@ -570,33 +574,52 @@ export default function KasirVerifyPage() {
                           <div className="text-xs text-slate-600 mt-1 font-medium">
                             {lastScannedResult.nama_paket} ({lastScannedResult.jumlah_orang} Orang)
                           </div>
-                          <div className="mt-3 text-2xl font-semibold font-mono text-slate-900">
+                          <div className="mt-2.5 text-2xl font-semibold font-mono text-slate-900">
                             Rp {Number(lastScannedResult.total_harga || 0).toLocaleString('id-ID')}
                           </div>
-                          <div className="mt-3 bg-sky-50 border border-sky-200 rounded-lg px-3 py-1.5 text-xs font-semibold text-sky-800 flex items-center gap-1.5">
-                            <Smartphone className="w-3.5 h-3.5 text-sky-600" />
-                            <span>Terkirim ke HP Kasir untuk ACC</span>
-                          </div>
-                          <div className="w-full mt-4 pt-2.5 border-t border-slate-100 space-y-1">
+
+                          {/* Direct ACC Button in Fullscreen */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              handleAccBooking(lastScannedResult.kode_booking);
+                              setLastScannedResult(null);
+                            }}
+                            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-3 px-4 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 mt-3.5 cursor-pointer"
+                          >
+                            <CheckCircle2 className="w-4 h-4" />
+                            <span>ACC Pembayaran Sekarang</span>
+                          </button>
+
+                          <div className="w-full mt-3 pt-2.5 border-t border-slate-100 space-y-1">
                             <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
                               <motion.div
                                 initial={{ width: '100%' }}
                                 animate={{ width: '0%' }}
-                                transition={{ duration: 3, ease: 'linear' }}
+                                transition={{ duration: 4, ease: 'linear' }}
                                 className="h-full bg-emerald-500"
                               />
                             </div>
-                            <p className="text-[10px] text-slate-400">Siap scan tiket kasir berikutnya...</p>
+                            <p className="text-[10px] text-slate-400">Tersedia di antrean HP &amp; laptop...</p>
                           </div>
                         </>
                       ) : (
                         <>
-                          <div className="w-12 h-12 bg-rose-50 border border-rose-200 rounded-full flex items-center justify-center mb-3">
-                            <AlertTriangle className="w-6 h-6 text-rose-600" />
+                          <div className="w-14 h-14 bg-rose-50 border border-rose-200 rounded-full flex items-center justify-center mb-2.5">
+                            <AlertTriangle className="w-8 h-8 text-rose-600" />
                           </div>
                           <h3 className="font-serif text-lg font-medium text-rose-950">Gagal Memindai</h3>
                           <p className="text-xs text-rose-700 mt-1 max-w-xs">{lastScannedResult.message}</p>
-                          <div className="w-full mt-4 pt-2.5 border-t border-slate-100 space-y-1">
+
+                          <button
+                            type="button"
+                            onClick={() => setLastScannedResult(null)}
+                            className="w-full bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold text-xs py-2.5 px-4 rounded-xl transition-all mt-3 cursor-pointer"
+                          >
+                            Tutup
+                          </button>
+
+                          <div className="w-full mt-3 pt-2.5 border-t border-slate-100 space-y-1">
                             <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
                               <motion.div
                                 initial={{ width: '100%' }}

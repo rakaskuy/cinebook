@@ -23,6 +23,9 @@ import {
   Loader2,
   Info,
   ShieldCheck,
+  Maximize2,
+  Minimize2,
+  X,
 } from 'lucide-react';
 import { BookingDetailResponse } from '@/lib/types';
 import { executeCheckBookingStatus } from '@/lib/supabase';
@@ -40,6 +43,7 @@ export default function TicketPage() {
   const [emailSent, setEmailSent] = useState(false);
   const [resending, setResending] = useState(false);
   const [timeLeft, setTimeLeft] = useState<number>(0);
+  const [isQrZoomed, setIsQrZoomed] = useState(false);
 
   const fetchTicket = async (emailToVerify: string) => {
     if (!kodeBooking || !emailToVerify) return;
@@ -105,7 +109,10 @@ export default function TicketPage() {
       await fetch('/api/resend-ticket-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ kode_booking: ticketData.kode_booking }),
+        body: JSON.stringify({
+          kode_booking: ticketData.kode_booking,
+          email: ticketData.email,
+        }),
       }).catch(() => null);
 
       setEmailSent(true);
@@ -344,18 +351,38 @@ export default function TicketPage() {
                   )}
                 </span>
 
-                <div className="p-3 bg-white border border-slate-200 rounded-xl shadow-sm max-w-[200px] w-full aspect-square flex items-center justify-center">
+                <div
+                  onClick={() => setIsQrZoomed(true)}
+                  className="p-4 bg-white border-2 border-slate-200/90 rounded-2xl shadow-sm max-w-[280px] sm:max-w-[320px] w-full aspect-square flex flex-col items-center justify-center cursor-pointer group hover:border-sky-400 hover:shadow-md transition-all relative overflow-hidden"
+                  title="Ketuk untuk perbesar QR layar penuh"
+                >
                   <QRCodeSVG
                     value={ticketData.qr_payload}
-                    size={170}
-                    level="M"
+                    size={260}
+                    level="Q"
                     includeMargin={true}
                     className="w-full h-full"
                   />
+                  <div className="absolute inset-0 bg-slate-900/0 group-hover:bg-slate-900/10 transition-colors flex items-center justify-center pointer-events-none">
+                    <span className="opacity-0 group-hover:opacity-100 transition-opacity bg-slate-900/80 text-white text-[10px] font-semibold px-2.5 py-1 rounded-full flex items-center gap-1 backdrop-blur-sm shadow-sm">
+                      <Maximize2 className="w-3 h-3" />
+                      Ketuk Perbesar
+                    </span>
+                  </div>
                 </div>
 
-                <div className="mt-3 font-mono font-semibold text-xs text-slate-800 bg-white px-2.5 py-1 rounded border border-slate-200">
-                  {ticketData.kode_booking}
+                <div className="mt-3 flex items-center gap-2">
+                  <span className="font-mono font-bold text-sm text-slate-900 bg-white px-3 py-1 rounded-lg border border-slate-200 shadow-sm">
+                    {ticketData.kode_booking}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setIsQrZoomed(true)}
+                    className="p-1.5 bg-slate-100 hover:bg-sky-50 text-slate-600 hover:text-sky-700 rounded-lg border border-slate-200 transition-colors cursor-pointer"
+                    title="Perbesar QR Layar Penuh"
+                  >
+                    <Maximize2 className="w-4 h-4" />
+                  </button>
                 </div>
 
                 <p className="text-[11px] text-slate-500 mt-2 max-w-xs">
@@ -469,6 +496,78 @@ export default function TicketPage() {
               </motion.button>
             </div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Full-Screen QR Zoom Modal for Easy Scanning at Gate/Cashier */}
+      <AnimatePresence>
+        {isQrZoomed && ticketData && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsQrZoomed(false)}
+              className="absolute inset-0 bg-slate-950/85 backdrop-blur-md"
+            />
+
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 28 }}
+              className="relative bg-white rounded-3xl p-6 sm:p-8 shadow-2xl max-w-sm sm:max-w-md w-full flex flex-col items-center text-center z-10 border border-slate-200 space-y-4"
+            >
+              <button
+                type="button"
+                onClick={() => setIsQrZoomed(false)}
+                className="absolute top-4 right-4 text-slate-400 hover:text-slate-700 p-2 rounded-full hover:bg-slate-100 transition-colors cursor-pointer"
+                title="Tutup"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="space-y-1 pt-2">
+                <span className="text-[11px] font-bold text-sky-700 uppercase tracking-wider bg-sky-50 px-2.5 py-0.5 rounded-full border border-sky-200">
+                  {ticketData.status === 'PENDING' ? 'QR Verifikasi Kasir' : 'QR Gate Pass Resmi'}
+                </span>
+                <h3 className="font-serif text-xl sm:text-2xl font-semibold text-slate-900 pt-1">
+                  {ticketData.nama_lengkap}
+                </h3>
+                <p className="text-xs text-slate-500 font-mono">
+                  {ticketData.kode_booking} &bull; {ticketData.kelas}
+                </p>
+              </div>
+
+              {/* Extra Large QR Matrix in White Card */}
+              <div className="p-4 bg-white border-2 border-slate-900/10 rounded-2xl shadow-inner w-full aspect-square flex items-center justify-center max-w-[300px] sm:max-w-[340px]">
+                <QRCodeSVG
+                  value={ticketData.qr_payload}
+                  size={320}
+                  level="Q"
+                  includeMargin={true}
+                  className="w-full h-full"
+                />
+              </div>
+
+              <div className="text-center space-y-1">
+                <p className="text-xs font-semibold text-slate-800">
+                  {ticketData.film_judul} &bull; {ticketData.jumlah_orang} Orang
+                </p>
+                <p className="text-[11px] text-slate-500">
+                  Arahkan layar ponsel ini dengan kecerahan penuh ke kamera pemindai.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsQrZoomed(false)}
+                className="w-full bg-slate-900 hover:bg-sky-950 text-white font-semibold text-xs py-3 rounded-xl transition-colors cursor-pointer shadow-sm"
+              >
+                Tutup Tampilan Layar Penuh
+              </button>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </div>

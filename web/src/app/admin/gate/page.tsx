@@ -739,31 +739,49 @@ export default function GateScanPage() {
                       animate={{ opacity: 1, scale: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.94, y: 16 }}
                       transition={{ type: 'spring', stiffness: 420, damping: 26 }}
-                      className={`absolute inset-4 sm:inset-6 z-20 rounded-2xl border p-5 sm:p-6 flex flex-col items-center justify-center text-center shadow-2xl backdrop-blur-md ${
+                      className={`${
+                        isFullscreen
+                          ? 'fixed inset-4 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:max-w-md sm:w-full z-[100000]'
+                          : 'absolute inset-4 sm:inset-6 z-30'
+                      } rounded-3xl border p-6 sm:p-7 flex flex-col items-center justify-center text-center shadow-2xl backdrop-blur-xl ${
                         lastScannedHUD.success
-                          ? 'bg-white/95 border-emerald-300 text-slate-900'
-                          : 'bg-white/95 border-rose-300 text-rose-950'
+                          ? 'bg-white border-emerald-300 text-slate-900 shadow-emerald-500/10'
+                          : 'bg-white border-rose-300 text-rose-950 shadow-rose-500/10'
                       }`}
                     >
                       {lastScannedHUD.success ? (
                         <>
-                          <div className="w-12 h-12 bg-emerald-50 border border-emerald-200 rounded-full flex items-center justify-center mb-2.5">
-                            <CheckCircle2 className="w-7 h-7 text-emerald-600" />
+                          <div className="w-14 h-14 bg-emerald-50 border border-emerald-200 rounded-full flex items-center justify-center mb-2.5">
+                            <CheckCircle2 className="w-8 h-8 text-emerald-600" />
                           </div>
-                          <span className="font-mono text-[11px] bg-slate-900 text-white px-2.5 py-0.5 rounded-md mb-1.5">
+                          <span className="font-mono text-xs font-bold bg-slate-900 text-white px-3 py-0.5 rounded-md mb-1.5">
                             {lastScannedHUD.kode_booking}
                           </span>
-                          <h2 className="font-serif text-lg sm:text-2xl font-medium tracking-tight text-slate-900">
+                          <h2 className="font-serif text-xl sm:text-2xl font-medium tracking-tight text-slate-900">
                             {lastScannedHUD.nama_lengkap} ({lastScannedHUD.kelas})
                           </h2>
                           <p className="text-xs text-slate-600 mt-1 font-medium">
                             {lastScannedHUD.film_judul} &bull; {lastScannedHUD.jumlah_orang} Orang ({lastScannedHUD.nama_paket})
                           </p>
-                          <div className="mt-3 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-1 text-xs font-semibold text-emerald-800 flex items-center gap-1.5">
+                          <div className="mt-3 bg-emerald-50 border border-emerald-200 rounded-lg px-3.5 py-1 text-xs font-bold text-emerald-800 flex items-center gap-1.5">
                             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                             <span>QR GATE PASS VALID: SIAP MASUK</span>
                           </div>
-                          <div className="w-full mt-3.5 pt-2 border-t border-slate-100 space-y-1">
+
+                          {/* Instant 1-Click Approve in Fullscreen */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              handleGateDecision('ACC');
+                              setLastScannedHUD(null);
+                            }}
+                            className="w-full bg-slate-900 hover:bg-sky-950 text-white font-semibold text-xs py-3 px-4 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 mt-3.5 cursor-pointer"
+                          >
+                            <DoorOpen className="w-4 h-4" />
+                            <span>Izinkan Masuk Teater Sekarang</span>
+                          </button>
+
+                          <div className="w-full mt-3 pt-2 border-t border-slate-100 space-y-1">
                             <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
                               <motion.div
                                 initial={{ width: '100%' }}
@@ -772,24 +790,33 @@ export default function GateScanPage() {
                                 className="h-full bg-emerald-500"
                               />
                             </div>
-                            <p className="text-[10px] text-slate-400">Data siap diizinkan masuk teater...</p>
+                            <p className="text-[10px] text-slate-400">Ketuk layar atau tunggu auto-reset...</p>
                           </div>
                         </>
                       ) : (
                         <>
-                          <div className="w-12 h-12 bg-rose-50 border border-rose-200 rounded-full flex items-center justify-center mb-2.5">
-                            <AlertTriangle className="w-6 h-6 text-rose-600" />
+                          <div className="w-14 h-14 bg-rose-50 border border-rose-200 rounded-full flex items-center justify-center mb-2.5">
+                            <AlertTriangle className="w-8 h-8 text-rose-600" />
                           </div>
-                          <span className="font-mono text-[11px] bg-rose-900 text-white px-2.5 py-0.5 rounded-md mb-1.5">
+                          <span className="font-mono text-xs font-bold bg-rose-900 text-white px-3 py-0.5 rounded-md mb-1.5">
                             {lastScannedHUD.kode_booking}
                           </span>
-                          <h3 className="font-serif text-lg font-medium text-rose-950">
+                          <h3 className="font-serif text-xl font-medium text-rose-950">
                             {lastScannedHUD.status === 'USED' ? 'Tiket Sudah Digunakan!' : 'Akses Gate Ditolak!'}
                           </h3>
-                          <p className="text-xs text-rose-700 mt-1 max-w-xs">
+                          <p className="text-xs text-rose-700 mt-1 max-w-xs font-medium">
                             {lastScannedHUD.message || 'Tiket ini tidak memenuhi syarat untuk masuk teater.'}
                           </p>
-                          <div className="w-full mt-3.5 pt-2 border-t border-slate-100 space-y-1">
+
+                          <button
+                            type="button"
+                            onClick={() => setLastScannedHUD(null)}
+                            className="w-full bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold text-xs py-2.5 px-4 rounded-xl transition-all mt-3.5 cursor-pointer"
+                          >
+                            Tutup Notifikasi
+                          </button>
+
+                          <div className="w-full mt-3 pt-2 border-t border-slate-100 space-y-1">
                             <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
                               <motion.div
                                 initial={{ width: '100%' }}

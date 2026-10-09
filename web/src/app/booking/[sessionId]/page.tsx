@@ -131,6 +131,16 @@ export default function BookingPage() {
         return;
       }
 
+      // Automatically dispatch E-Ticket confirmation email in background
+      fetch('/api/resend-ticket-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          kode_booking: result.kode_booking,
+          email: formData.email.trim().toLowerCase(),
+        }),
+      }).catch((e) => console.warn('Automatic email dispatch note:', e));
+
       router.push(`/ticket/${result.kode_booking}?email=${encodeURIComponent(formData.email.trim().toLowerCase())}`);
     } catch (err: any) {
       setSubmitError(err.message || 'Terjadi kesalahan sistem saat memproses pemesanan.');
