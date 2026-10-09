@@ -185,8 +185,12 @@ export default function SecretAdminLoginPage() {
           </div>
 
           <div className="flex items-center justify-center gap-2.5">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-cyan-400 to-sky-600 flex items-center justify-center text-white shadow-sm">
-              <Film className="w-5 h-5 text-white" />
+            <div className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0">
+              <img
+                src="/logo-cinemanik.png"
+                alt="Logo Cinemanik"
+                className="w-full h-full object-contain filter drop-shadow-[0_2px_10px_rgba(56,189,248,0.5)]"
+              />
             </div>
             <h1 className="font-serif text-2xl sm:text-3xl text-slate-900 font-medium tracking-tight">
               Cine<span className="italic text-sky-600 font-serif">manik</span> Admin

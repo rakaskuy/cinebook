@@ -58,8 +58,12 @@ export function AdminNavbar() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link href="/admin/dashboard" className="flex items-center gap-2.5 group">
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-cyan-400 to-sky-600 flex items-center justify-center text-white shadow-sm transition-transform duration-300 group-hover:scale-105">
-                <Film className="w-4 h-4 text-white" />
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center transition-transform duration-300 group-hover:scale-110 shrink-0">
+                <img
+                  src="/logo-cinemanik.png"
+                  alt="Logo Cinemanik"
+                  className="w-full h-full object-contain filter drop-shadow-[0_2px_6px_rgba(56,189,248,0.4)]"
+                />
               </div>
               <div>
                 <div className="flex items-center gap-2">

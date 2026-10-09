@@ -37,10 +37,14 @@ export function Navbar() {
     <>
       <header className="sticky top-0 z-40 bg-white/85 backdrop-blur-xl border-b border-sky-950/10 px-4 sm:px-6 lg:px-8 py-3 transition-all shadow-[0_2px_12px_rgba(8,47,73,0.04)]">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
-          {/* Logo with Anthropic-inspired Editorial Style */}
+          {/* Logo with Arctic Glacier Crystal Emblem */}
           <Link href="/" className="group flex items-center gap-3 shrink-0">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-400 to-sky-600 flex items-center justify-center text-white shadow-sm transition-transform duration-300 group-hover:scale-105">
-              <Film className="w-4 h-4 text-white" />
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center transition-transform duration-300 group-hover:scale-110 shrink-0">
+              <img
+                src="/logo-cinemanik.png"
+                alt="Logo Cinemanik"
+                className="w-full h-full object-contain filter drop-shadow-[0_2px_8px_rgba(56,189,248,0.4)]"
+              />
             </div>
             <div>
               <div className="flex items-center gap-2">
