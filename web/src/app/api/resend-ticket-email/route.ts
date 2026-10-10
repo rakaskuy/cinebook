@@ -101,7 +101,7 @@ export async function POST(request: Request) {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
     const ticketUrl = `${appUrl}/ticket/${cleanCode}?email=${encodeURIComponent(recipientEmail)}`;
     const smtpUser = process.env.SMTP_USER || process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'kenxfear@gmail.com';
-    const smtpPass = process.env.SMTP_PASS?.replace(/\s+/g, '');
+    const smtpPass = process.env.SMTP_PASS?.trim();
     const senderEmail = process.env.SENDER_EMAIL || `Cinemanik SMAN 1 Kendal <${smtpUser}>`;
     const emailSubject = `[Cinemanik] E-Ticket Tiket Anda - ${cleanCode} (${bookingData?.film_judul || 'Festival'})`;
 
