@@ -1,17 +1,53 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin, isSupabaseConfigured } from '@/lib/supabase';
+import nodemailer from 'nodemailer';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 export async function POST(request: Request) {
   try {
-    const { kode_booking, email } = await request.json();
+    const body = await request.json();
+    const { kode_booking, email } = body;
     if (!kode_booking) {
       return NextResponse.json({ error: 'kode_booking is required' }, { status: 400 });
     }
 
     const cleanCode = String(kode_booking).trim().toUpperCase();
+
+    // -------------------------------------------------------------------------
+    // 1. FORWARDING TO EXTERNAL MAILER (Untuk Vercel -> PC 192.168.1.7)
+    // -------------------------------------------------------------------------
+    const externalMailerUrl = process.env.EXTERNAL_MAILER_URL?.trim();
+    const isFromExternal = request.headers.get('x-from-external-mailer') === '1';
+
+    if (externalMailerUrl && !isFromExternal) {
+      try {
+        console.log(`[Vercel Forward] Mengarahkan pengiriman email ke server PC: ${externalMailerUrl}`);
+        const fwdRes = await fetch(externalMailerUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-from-external-mailer': '1',
+            ...(process.env.MAILER_SECRET ? { 'x-mailer-secret': process.env.MAILER_SECRET } : {}),
+          },
+          body: JSON.stringify(body),
+        });
+
+        if (fwdRes.ok) {
+          const fwdData = await fwdRes.json();
+          return NextResponse.json({ ...fwdData, forwarded: true });
+        } else {
+          console.warn(`[External Mailer Error] Server PC merespon status ${fwdRes.status}. Mencoba fallback...`);
+        }
+      } catch (err: any) {
+        console.warn(`[External Mailer Unreachable] Gagal menghubungi server PC: ${err.message}. Mencoba fallback...`);
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // 2. AMBIL DATA DETAIL TIKET DARI DATABASE
+    // -------------------------------------------------------------------------
     let bookingData: any = null;
 
     if (isSupabaseConfigured && supabaseAdmin) {
@@ -64,10 +100,10 @@ export async function POST(request: Request) {
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
     const ticketUrl = `${appUrl}/ticket/${cleanCode}?email=${encodeURIComponent(recipientEmail)}`;
-    const resendApiKey = process.env.RESEND_API_KEY;
     const senderEmail = process.env.SENDER_EMAIL || 'Cinemanik SMAN 1 Kendal <onboarding@resend.dev>';
+    const emailSubject = `[Cinemanik] E-Ticket Tiket Anda - ${cleanCode} (${bookingData?.film_judul || 'Festival'})`;
 
-    // Styled HTML E-Ticket Template for Email
+    // Template HTML Email Resmi
     const htmlEmail = `
 <!DOCTYPE html>
 <html>
@@ -164,33 +200,85 @@ export async function POST(request: Request) {
 </html>
     `;
 
-    if (!resendApiKey) {
-      console.log(`[Email Simulation] E-Ticket ${cleanCode} siap dikirim ke ${recipientEmail}. (RESEND_API_KEY belum terisi di .env.local)`);
-      return NextResponse.json({
-        success: true,
-        simulated: true,
-        message: `Email E-Ticket terverifikasi untuk ${recipientEmail}. Masukkan RESEND_API_KEY di .env.local untuk pengiriman langsung ke inbox.`,
-        ticketUrl,
-        recipient: recipientEmail,
-      });
+    // -------------------------------------------------------------------------
+    // 3. PENGIRIMAN EMAIL LOKAL / SELF-HOSTED (SMTP / Postfix / Gmail)
+    // -------------------------------------------------------------------------
+    const smtpHost = process.env.SMTP_HOST || (process.env.USE_LOCAL_POSTFIX === 'true' ? 'localhost' : '');
+    const smtpUser = process.env.SMTP_USER;
+    const smtpPass = process.env.SMTP_PASS;
+
+    if (smtpHost || smtpUser) {
+      try {
+        const transportConfig: any = smtpUser
+          ? {
+              host: smtpHost || 'smtp.gmail.com',
+              port: Number(process.env.SMTP_PORT) || 465,
+              secure: Number(process.env.SMTP_PORT) === 465 || !process.env.SMTP_PORT,
+              auth: {
+                user: smtpUser,
+                pass: smtpPass,
+              },
+            }
+          : {
+              host: 'localhost',
+              port: 25,
+              tls: { rejectUnauthorized: false },
+            };
+
+        const transporter = nodemailer.createTransport(transportConfig);
+        const info = await transporter.sendMail({
+          from: senderEmail,
+          to: recipientEmail,
+          subject: emailSubject,
+          html: htmlEmail,
+        });
+
+        console.log(`[Self-Hosted Mailer] Email berhasil dikirim via SMTP (${info.messageId}) ke ${recipientEmail}`);
+        return NextResponse.json({
+          success: true,
+          provider: smtpUser ? 'smtp' : 'postfix',
+          messageId: info.messageId,
+          ticketUrl,
+          recipient: recipientEmail,
+        });
+      } catch (smtpErr: any) {
+        console.error('[SMTP Send Error]:', smtpErr);
+      }
     }
 
-    const res = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${resendApiKey}`,
-      },
-      body: JSON.stringify({
-        from: senderEmail,
-        to: [recipientEmail],
-        subject: `[Cinemanik] E-Ticket Tiket Anda - ${cleanCode} (${bookingData?.film_judul || 'Festival'})`,
-        html: htmlEmail,
-      }),
-    });
+    // -------------------------------------------------------------------------
+    // 4. FALLBACK KE RESEND API (Jika Tersedia)
+    // -------------------------------------------------------------------------
+    const resendApiKey = process.env.RESEND_API_KEY;
+    if (resendApiKey) {
+      const res = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${resendApiKey}`,
+        },
+        body: JSON.stringify({
+          from: senderEmail,
+          to: [recipientEmail],
+          subject: emailSubject,
+          html: htmlEmail,
+        }),
+      });
 
-    const result = await res.json();
-    return NextResponse.json({ success: true, result, ticketUrl });
+      const result = await res.json();
+      return NextResponse.json({ success: true, provider: 'resend', result, ticketUrl });
+    }
+
+    // -------------------------------------------------------------------------
+    // 5. SIMULASI AMAN (Jika Belum Ada Provider yang Diisi)
+    // -------------------------------------------------------------------------
+    return NextResponse.json({
+      success: true,
+      simulated: true,
+      message: `Email E-Ticket terverifikasi untuk ${recipientEmail}.`,
+      ticketUrl,
+      recipient: recipientEmail,
+    });
   } catch (err: any) {
     console.error('Email sending error:', err);
     return NextResponse.json({ error: err.message }, { status: 500 });
