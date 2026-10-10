@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin, isSupabaseConfigured } from '@/lib/supabase';
 import nodemailer from 'nodemailer';
+import QRCode from 'qrcode';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -56,6 +57,7 @@ export async function POST(request: Request) {
         .select(`
           id,
           kode_booking,
+          qr_payload,
           nama_lengkap,
           kelas,
           email,
@@ -78,6 +80,7 @@ export async function POST(request: Request) {
       if (!error && data) {
         bookingData = {
           kode_booking: data.kode_booking,
+          qr_payload: data.qr_payload || cleanCode,
           nama_lengkap: data.nama_lengkap,
           kelas: data.kelas,
           email: data.email,
@@ -104,8 +107,26 @@ export async function POST(request: Request) {
     const smtpPass = process.env.SMTP_PASS?.trim();
     const senderEmail = process.env.SENDER_EMAIL || `Cinemanik SMAN 1 Kendal <${smtpUser}>`;
     const emailSubject = `[Cinemanik] E-Ticket Tiket Anda - ${cleanCode} (${bookingData?.film_judul || 'Festival'})`;
+    const qrPayloadToEncode = bookingData?.qr_payload || cleanCode;
 
-    // Template HTML Email Resmi
+    // -------------------------------------------------------------------------
+    // 3. GENERATE QR CODE BUFFER (Untuk Embedded CID Image di Email)
+    // -------------------------------------------------------------------------
+    let qrBuffer: Buffer | null = null;
+    try {
+      qrBuffer = await QRCode.toBuffer(qrPayloadToEncode, {
+        width: 320,
+        margin: 2,
+        color: {
+          dark: '#0284C7',
+          light: '#FFFFFF',
+        },
+      });
+    } catch (qrErr) {
+      console.warn('QR Code generation error for email:', qrErr);
+    }
+
+    // Template HTML Email Resmi dengan QR Code Tersemat
     const htmlEmail = `
 <!DOCTYPE html>
 <html>
@@ -131,20 +152,29 @@ export async function POST(request: Request) {
           Halo <strong>${bookingData?.nama_lengkap || 'Penonton'}</strong> (${bookingData?.kelas || '-'}),
         </p>
         <p style="margin: 0 0 24px 0; font-size: 13px; line-height: 1.6; color: #64748B;">
-          Reservasi tiket Anda untuk festival bioskop Cinemanik 2026 telah berhasil tercatat di sistem kami.
+          Reservasi tiket Anda untuk festival bioskop Cinemanik 2026 telah berhasil tercatat. Simpan email ini dan tunjukkan QR Code di bawah ke petugas kami.
         </p>
 
-        <!-- Booking Code Box -->
-        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #F8FAFC; border: 2px dashed #CBD5E1; border-radius: 14px; margin-bottom: 24px; text-align: center;">
+        <!-- Booking Code & QR Box -->
+        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #F8FAFC; border: 2px dashed #BAE6FD; border-radius: 16px; margin-bottom: 24px; text-align: center;">
           <tr>
-            <td style="padding: 20px;">
-              <span style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #64748B;">Kode Booking Resmi</span>
-              <div style="font-size: 24px; font-weight: 800; font-family: monospace; letter-spacing: 0.08em; color: #0284C7; margin: 6px 0;">
+            <td style="padding: 24px 20px;">
+              <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #64748B;">Kode Booking Resmi</span>
+              <div style="font-size: 26px; font-weight: 800; font-family: monospace; letter-spacing: 0.08em; color: #0284C7; margin: 6px 0 10px 0;">
                 ${cleanCode}
               </div>
-              <span style="display: inline-block; font-size: 11px; font-weight: 600; background: #FEF3C7; color: #92400E; padding: 3px 10px; border-radius: 999px; border: 1px solid #FDE68A;">
-                ${bookingData?.status === 'ACC' ? 'LUNAS (ACC)' : 'MENUNGGU PEMBAYARAN KASIR'}
+              <span style="display: inline-block; font-size: 11px; font-weight: 700; background: ${bookingData?.status === 'ACC' ? '#DCFCE7' : '#FEF3C7'}; color: ${bookingData?.status === 'ACC' ? '#166534' : '#92400E'}; padding: 4px 12px; border-radius: 999px; border: 1px solid ${bookingData?.status === 'ACC' ? '#BBF7D0' : '#FDE68A'}; margin-bottom: 16px;">
+                ${bookingData?.status === 'ACC' ? 'LUNAS (QR GATE PASS AKTIF)' : 'MENUNGGU PEMBAYARAN KASIR'}
               </span>
+
+              <!-- Embedded QR Code Image -->
+              <div style="background-color: #ffffff; padding: 14px; border-radius: 16px; border: 2px solid #E2E8F0; display: inline-block; box-shadow: 0 4px 12px rgba(8, 47, 73, 0.08); margin: 0 auto;">
+                <img src="cid:ticket-qrcode" alt="QR E-Ticket ${cleanCode}" width="220" height="220" style="display: block; margin: 0 auto; border-radius: 8px;" />
+              </div>
+
+              <p style="margin: 12px 0 0 0; font-size: 11px; color: #64748B; line-height: 1.4;">
+                Pindai langsung QR Code di atas di meja kasir atau gerbang masuk teater.
+              </p>
             </td>
           </tr>
         </table>
@@ -176,7 +206,7 @@ export async function POST(request: Request) {
           <tr>
             <td align="center">
               <a href="${ticketUrl}" target="_blank" style="display: inline-block; background: #0F172A; color: #ffffff; text-decoration: none; font-size: 13px; font-weight: 700; padding: 14px 28px; border-radius: 12px; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2);">
-                Buka E-Ticket &amp; QR Code Online &rarr;
+                Buka E-Ticket &amp; QR Code Interaktif di Browser &rarr;
               </a>
             </td>
           </tr>
@@ -184,8 +214,12 @@ export async function POST(request: Request) {
 
         <!-- Instructions -->
         <div style="background-color: #F0FDF4; border: 1px solid #BBF7D0; border-radius: 12px; padding: 14px; font-size: 12px; color: #166534; line-height: 1.5;">
-          <strong>Petunjuk Pembayaran:</strong><br>
-          Silakan tunjukkan email ini atau kode booking ke pos kasir panitia OSIS dalam waktu <strong>24 jam</strong> untuk melunasi tiket Anda. Setelah di-ACC, QR Gate Pass Anda akan aktif untuk masuk teater pada hari penayangan.
+          <strong>Petunjuk Kehadiran:</strong><br>
+          ${
+            bookingData?.status === 'ACC'
+              ? 'Tiket Anda sudah LUNAS. Cukup tunjukkan QR Code di atas langsung kepada petugas gate di pintu masuk bioskop pada hari penayangan.'
+              : 'Silakan tunjukkan QR Code di atas atau kode booking ke pos kasir panitia OSIS dalam waktu <strong>24 jam</strong> untuk melunasi pembayaran tiket.'
+          }
         </div>
       </td>
     </tr>
@@ -194,7 +228,7 @@ export async function POST(request: Request) {
     <tr>
       <td style="background-color: #F8FAFC; border-top: 1px solid #E2E8F0; padding: 20px 28px; text-align: center; font-size: 11px; color: #94A3B8;">
         &copy; 2026 OSIS SMA Negeri 1 Kendal. Festival Bioskop Cinemanik 2026.<br>
-        Email otomatis sistem. Harap simpan email ini sebagai bukti reservasi resmi.
+        Email resmi otomatis. Simpan email ini untuk akses masuk teater.
       </td>
     </tr>
   </table>
@@ -203,7 +237,7 @@ export async function POST(request: Request) {
     `;
 
     // -------------------------------------------------------------------------
-    // 3. PENGIRIMAN EMAIL RESMI GMAIL SMTP / POSTFIX SERVER LOKAL
+    // 4. PENGIRIMAN EMAIL RESMI GMAIL SMTP / POSTFIX SERVER LOKAL
     // -------------------------------------------------------------------------
     const smtpHost = process.env.SMTP_HOST || (smtpPass ? 'smtp.gmail.com' : (process.env.USE_LOCAL_POSTFIX === 'true' ? 'localhost' : ''));
 
@@ -226,13 +260,25 @@ export async function POST(request: Request) {
             };
 
         const transporter = nodemailer.createTransport(transportConfig);
-        const info = await transporter.sendMail({
+        const mailOptions: any = {
           from: senderEmail,
           to: recipientEmail,
           subject: emailSubject,
           html: htmlEmail,
-        });
+          ...(qrBuffer
+            ? {
+                attachments: [
+                  {
+                    filename: `qrcode-${cleanCode}.png`,
+                    content: qrBuffer,
+                    cid: 'ticket-qrcode',
+                  },
+                ],
+              }
+            : {}),
+        };
 
+        const info = await transporter.sendMail(mailOptions);
         console.log(`[Google/Local Mailer] Email berhasil dikirim via SMTP (${info.messageId}) ke ${recipientEmail}`);
         return NextResponse.json({
           success: true,
@@ -247,7 +293,7 @@ export async function POST(request: Request) {
     }
 
     // -------------------------------------------------------------------------
-    // 4. SIMULASI AMAN (Jika Belum Mengisi Password Aplikasi Google)
+    // 5. SIMULASI AMAN (Jika Belum Mengisi Password Aplikasi Google)
     // -------------------------------------------------------------------------
     return NextResponse.json({
       success: true,
