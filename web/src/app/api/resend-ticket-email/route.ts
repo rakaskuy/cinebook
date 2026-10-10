@@ -100,7 +100,9 @@ export async function POST(request: Request) {
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
     const ticketUrl = `${appUrl}/ticket/${cleanCode}?email=${encodeURIComponent(recipientEmail)}`;
-    const senderEmail = process.env.SENDER_EMAIL || 'Cinemanik SMAN 1 Kendal <onboarding@resend.dev>';
+    const smtpUser = process.env.SMTP_USER || process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'kenxfear@gmail.com';
+    const smtpPass = process.env.SMTP_PASS?.replace(/\s+/g, '');
+    const senderEmail = process.env.SENDER_EMAIL || `Cinemanik SMAN 1 Kendal <${smtpUser}>`;
     const emailSubject = `[Cinemanik] E-Ticket Tiket Anda - ${cleanCode} (${bookingData?.film_judul || 'Festival'})`;
 
     // Template HTML Email Resmi
@@ -201,15 +203,13 @@ export async function POST(request: Request) {
     `;
 
     // -------------------------------------------------------------------------
-    // 3. PENGIRIMAN EMAIL LOKAL / SELF-HOSTED (SMTP / Postfix / Gmail)
+    // 3. PENGIRIMAN EMAIL RESMI GMAIL SMTP / POSTFIX SERVER LOKAL
     // -------------------------------------------------------------------------
-    const smtpHost = process.env.SMTP_HOST || (process.env.USE_LOCAL_POSTFIX === 'true' ? 'localhost' : '');
-    const smtpUser = process.env.SMTP_USER;
-    const smtpPass = process.env.SMTP_PASS;
+    const smtpHost = process.env.SMTP_HOST || (smtpPass ? 'smtp.gmail.com' : (process.env.USE_LOCAL_POSTFIX === 'true' ? 'localhost' : ''));
 
-    if (smtpHost || smtpUser) {
+    if (smtpHost || smtpPass) {
       try {
-        const transportConfig: any = smtpUser
+        const transportConfig: any = smtpPass
           ? {
               host: smtpHost || 'smtp.gmail.com',
               port: Number(process.env.SMTP_PORT) || 465,
@@ -233,10 +233,10 @@ export async function POST(request: Request) {
           html: htmlEmail,
         });
 
-        console.log(`[Self-Hosted Mailer] Email berhasil dikirim via SMTP (${info.messageId}) ke ${recipientEmail}`);
+        console.log(`[Google/Local Mailer] Email berhasil dikirim via SMTP (${info.messageId}) ke ${recipientEmail}`);
         return NextResponse.json({
           success: true,
-          provider: smtpUser ? 'smtp' : 'postfix',
+          provider: smtpPass ? 'gmail-smtp' : 'postfix',
           messageId: info.messageId,
           ticketUrl,
           recipient: recipientEmail,
@@ -247,35 +247,12 @@ export async function POST(request: Request) {
     }
 
     // -------------------------------------------------------------------------
-    // 4. FALLBACK KE RESEND API (Jika Tersedia)
-    // -------------------------------------------------------------------------
-    const resendApiKey = process.env.RESEND_API_KEY;
-    if (resendApiKey) {
-      const res = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${resendApiKey}`,
-        },
-        body: JSON.stringify({
-          from: senderEmail,
-          to: [recipientEmail],
-          subject: emailSubject,
-          html: htmlEmail,
-        }),
-      });
-
-      const result = await res.json();
-      return NextResponse.json({ success: true, provider: 'resend', result, ticketUrl });
-    }
-
-    // -------------------------------------------------------------------------
-    // 5. SIMULASI AMAN (Jika Belum Ada Provider yang Diisi)
+    // 4. SIMULASI AMAN (Jika Belum Mengisi Password Aplikasi Google)
     // -------------------------------------------------------------------------
     return NextResponse.json({
       success: true,
       simulated: true,
-      message: `Email E-Ticket terverifikasi untuk ${recipientEmail}.`,
+      message: `Email E-Ticket terverifikasi untuk ${recipientEmail}. Masukkan SMTP_PASS di .env.local untuk pengiriman langsung via akun Google Anda.`,
       ticketUrl,
       recipient: recipientEmail,
     });
