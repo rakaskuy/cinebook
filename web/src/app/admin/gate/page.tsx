@@ -28,51 +28,7 @@ import {
   AdminScanPreviewResponse,
 } from '@/lib/supabase';
 import { GateQueueItem } from '@/lib/types';
-
-function playGateTone(isApproved: boolean) {
-  if (typeof window === 'undefined') return;
-  try {
-    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-    if (!AudioContextClass) return;
-    const ctx = new AudioContextClass();
-
-    if (ctx.state === 'suspended') {
-      ctx.resume().catch(() => {});
-    }
-
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-
-    if (isApproved) {
-      osc.type = 'sine';
-      // Harmonic 3-note cinema chime: E5 (659.25Hz) -> A5 (880.00Hz) -> E6 (1318.51Hz)
-      osc.frequency.setValueAtTime(659.25, ctx.currentTime);
-      osc.frequency.setValueAtTime(880.0, ctx.currentTime + 0.08);
-      osc.frequency.setValueAtTime(1318.51, ctx.currentTime + 0.16);
-      gain.gain.setValueAtTime(0.65, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.45);
-      osc.start();
-      osc.stop(ctx.currentTime + 0.45);
-    } else {
-      // Dual-tone warning buzz: 220Hz -> 160Hz
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(220, ctx.currentTime);
-      osc.frequency.setValueAtTime(160, ctx.currentTime + 0.12);
-      gain.gain.setValueAtTime(0.6, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
-      osc.start();
-      osc.stop(ctx.currentTime + 0.4);
-    }
-
-    if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
-      navigator.vibrate(isApproved ? [120, 60, 120] : [260, 80, 260]);
-    }
-  } catch (e) {
-    console.warn('Audio chime playback failed:', e);
-  }
-}
+import { unlockAudio, playScanSound } from '@/lib/audioNotifications';
 
 async function safeStopScanner(scanner: any) {
   if (!scanner) return;
@@ -144,6 +100,7 @@ export default function GateScanPage() {
   const handleDecodedRef = useRef<any>(null);
 
   const toggleFullscreen = () => {
+    unlockAudio();
     if (!isFullscreen) {
       if (document.documentElement.requestFullscreen) {
         document.documentElement.requestFullscreen().catch(() => {});
@@ -156,6 +113,20 @@ export default function GateScanPage() {
       setIsFullscreen(false);
     }
   };
+
+  useEffect(() => {
+    const handleGesture = () => {
+      unlockAudio();
+    };
+    window.addEventListener('click', handleGesture, { passive: true });
+    window.addEventListener('touchstart', handleGesture, { passive: true });
+    window.addEventListener('keydown', handleGesture, { passive: true });
+    return () => {
+      window.removeEventListener('click', handleGesture);
+      window.removeEventListener('touchstart', handleGesture);
+      window.removeEventListener('keydown', handleGesture);
+    };
+  }, []);
 
   useEffect(() => {
     const handleFsChange = () => {
@@ -301,7 +272,7 @@ export default function GateScanPage() {
         setScannedCode(res.kode_booking);
       }
       const isApproved = Boolean(res.success && res.status === 'ACC' && res.is_session_today);
-      playGateTone(isApproved);
+      playScanSound(isApproved);
 
       setLastScannedHUD({
         success: isApproved,
@@ -327,7 +298,7 @@ export default function GateScanPage() {
         message: err.message || 'QR Code tidak dapat diverifikasi!',
         available_actions: [],
       });
-      playGateTone(false);
+      playScanSound(false);
 
       setLastScannedHUD({
         success: false,
@@ -370,7 +341,7 @@ export default function GateScanPage() {
         setScannedCode(res.kode_booking);
       }
       const isApproved = Boolean(res.success && res.status === 'ACC' && res.is_session_today);
-      playGateTone(isApproved);
+      playScanSound(isApproved);
 
       setLastScannedHUD({
         success: isApproved,
@@ -396,7 +367,7 @@ export default function GateScanPage() {
         message: err.message || 'Kode tiket tidak ditemukan.',
         available_actions: [],
       });
-      playGateTone(false);
+      playScanSound(false);
 
       setLastScannedHUD({
         success: false,
@@ -424,7 +395,7 @@ export default function GateScanPage() {
     try {
       setSubmitting(true);
       await executeAdminSubmitDecision(codeToAcc, 'ACC', undefined, 'gate');
-      playGateTone(true);
+      playScanSound(true);
       setActionNotice({
         type: 'success',
         text: `Akses penonton tiket ${codeToAcc} berhasil diizinkan masuk!`,
@@ -435,7 +406,7 @@ export default function GateScanPage() {
         setScannedCode(null);
       }
     } catch (err: any) {
-      playGateTone(false);
+      playScanSound(false);
       setActionNotice({
         type: 'error',
         text: err.message || 'Gagal memvalidasi izin masuk gate.',
@@ -455,14 +426,14 @@ export default function GateScanPage() {
       await executeAdminSubmitDecision(targetCode, decision, reason, 'gate');
 
       if (decision === 'ACC') {
-        playGateTone(true);
+        playScanSound(true);
         setGateFeedback({
           type: 'PASS',
           title: 'AKSES MASUK DIIZINKAN',
           msg: `${previewData.nama_lengkap} (${previewData.jumlah_orang} Orang) silakan masuk ke teater.`,
         });
       } else {
-        playGateTone(false);
+        playScanSound(false);
         setGateFeedback({
           type: 'REJECT',
           title: 'AKSES MASUK DITOLAK',
@@ -481,7 +452,7 @@ export default function GateScanPage() {
         isProcessingScanRef.current = false;
       }, 1000);
     } catch (err: any) {
-      playGateTone(false);
+      playScanSound(false);
       alert(err.message || 'Gagal memproses aksi gate.');
       isProcessingScanRef.current = false;
     } finally {
@@ -499,7 +470,7 @@ export default function GateScanPage() {
     try {
       setSubmitting(true);
       await executeAdminSubmitDecision(targetDeclineCode, 'DECLINE', declineReason.trim(), 'gate');
-      playGateTone(false);
+      playScanSound(false);
       setActionNotice({
         type: 'success',
         text: `Tiket ${targetDeclineCode} ditolak: ${declineReason}`,
@@ -1023,10 +994,10 @@ export default function GateScanPage() {
                   <div className="p-8 text-center bg-slate-50 border border-dashed border-slate-200 rounded-xl space-y-2">
                     <Ticket className="w-8 h-8 mx-auto text-slate-400" />
                     <p className="font-semibold text-xs text-slate-700">
-                      Tidak Ada Tiket Siap Masuk
+                      Tidak Ada Antrean di Pintu Gate
                     </p>
-                    <p className="text-xs text-slate-500 max-w-xs mx-auto">
-                      Tiket yang sudah disetujui kasir (status ACC) akan otomatis tampil di sini.
+                    <p className="text-xs text-slate-500 max-w-xs mx-auto leading-relaxed">
+                      Scan QR penonton di kamera gerbang terlebih dahulu. Tiket yang baru dipindai akan langsung muncul di sini untuk diizinkan masuk teater.
                     </p>
                   </div>
                 ) : (

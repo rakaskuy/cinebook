@@ -40,30 +40,9 @@ const mockFilms: Film[] = [];
 const mockPackages: Package[] = [
   {
     id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-    nama_paket: 'Frost Solo Pass (1 Orang)',
+    nama_paket: 'Tiket Reguler (1 Orang)',
     jumlah_orang: 1,
     harga: 25000,
-    is_active: true,
-  },
-  {
-    id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
-    nama_paket: 'Glacier Couple Combo (2 Orang + Hot Popcorn)',
-    jumlah_orang: 2,
-    harga: 45000,
-    is_active: true,
-  },
-  {
-    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
-    nama_paket: 'Arctic Trio Warm (3 Orang + 3 Minum Hangat)',
-    jumlah_orang: 3,
-    harga: 65000,
-    is_active: true,
-  },
-  {
-    id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
-    nama_paket: 'Blizzard Squad Feast (4 Orang + Winter Feast)',
-    jumlah_orang: 4,
-    harga: 80000,
     is_active: true,
   },
 ];
@@ -660,7 +639,8 @@ export async function fetchCashierQueue(): Promise<CashierQueueItem[]> {
     try {
       const { data, error } = await supabase.rpc('get_cashier_queue');
       if (!error && Array.isArray(data)) {
-        return data;
+        // Hanya tampilkan tiket yang sudah dipindai di meja kasir
+        return data.filter((item: any) => Boolean(item.last_scanned_at));
       }
     } catch (e) {
       console.error('Error fetching cashier queue:', e);
@@ -668,13 +648,17 @@ export async function fetchCashierQueue(): Promise<CashierQueueItem[]> {
   }
 
   // Local/Mock fallback
-  return localQueue.sort((a, b) => (b.last_scanned_at ? 1 : 0) - (a.last_scanned_at ? 1 : 0));
+  return localQueue.filter((b) => Boolean(b.last_scanned_at)).sort((a, b) => (b.last_scanned_at ? 1 : 0) - (a.last_scanned_at ? 1 : 0));
 }
 
 export async function fetchGateQueue(): Promise<GateQueueItem[]> {
   const localBookings = getStoredMockBookings();
   const localQueue: GateQueueItem[] = Object.values(localBookings)
-    .filter((b) => b.status === 'ACC')
+    .filter((b) => {
+      if (b.status !== 'ACC') return false;
+      if (!b.last_scanned_at || !b.acc_at) return false;
+      return new Date(b.last_scanned_at).getTime() > new Date(b.acc_at).getTime();
+    })
     .map((b) => ({
       id: b.id,
       kode_booking: b.kode_booking,
@@ -693,14 +677,18 @@ export async function fetchGateQueue(): Promise<GateQueueItem[]> {
       tanggal: b.tanggal,
       jam_mulai: b.jam_mulai,
       is_session_today: b.tanggal === getTodayStr(),
-      is_recently_scanned: Boolean(b.last_scanned_at),
+      is_recently_scanned: true,
     }));
 
   if (isSupabaseConfigured && supabase) {
     try {
       const { data, error } = await supabase.rpc('get_gate_queue');
       if (!error && Array.isArray(data)) {
-        return data;
+        // Tiket HANYA muncul di antrean gate jika SUDAH di-scan di gerbang setelah disetujui kasir
+        return data.filter((item: any) => {
+          if (!item.last_scanned_at || !item.acc_at) return false;
+          return new Date(item.last_scanned_at).getTime() > new Date(item.acc_at).getTime();
+        });
       }
       if (error) {
         console.error('get_gate_queue error:', error.message);

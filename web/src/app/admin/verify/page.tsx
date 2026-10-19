@@ -25,51 +25,7 @@ import {
   fetchCashierQueue,
   CashierQueueItem,
 } from '@/lib/supabase';
-
-function playScanChime(success: boolean = true) {
-  if (typeof window === 'undefined') return;
-  try {
-    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-    if (!AudioContextClass) return;
-    const audioCtx = new AudioContextClass();
-
-    if (audioCtx.state === 'suspended') {
-      audioCtx.resume().catch(() => {});
-    }
-
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-
-    if (success) {
-      // Chime bioskop kasir yang jernih, lantang, dan memuaskan (E5 -> A5 -> E6)
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(659.25, audioCtx.currentTime); // E5
-      osc.frequency.setValueAtTime(880.00, audioCtx.currentTime + 0.08); // A5
-      osc.frequency.setValueAtTime(1318.51, audioCtx.currentTime + 0.16); // E6
-      gain.gain.setValueAtTime(0.65, audioCtx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.45);
-      osc.start();
-      osc.stop(audioCtx.currentTime + 0.45);
-    } else {
-      // Double buzz peringatan gagal
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(220, audioCtx.currentTime);
-      osc.frequency.setValueAtTime(160, audioCtx.currentTime + 0.12);
-      gain.gain.setValueAtTime(0.6, audioCtx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.4);
-      osc.start();
-      osc.stop(audioCtx.currentTime + 0.4);
-    }
-
-    if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
-      navigator.vibrate(success ? [120, 60, 120] : [260, 80, 260]);
-    }
-  } catch (e) {
-    console.warn('Audio chime playback failed:', e);
-  }
-}
+import { unlockAudio, playScanSound } from '@/lib/audioNotifications';
 
 async function safeStopScanner(scanner: any) {
   if (!scanner) return;
@@ -125,6 +81,7 @@ export default function KasirVerifyPage() {
   }, [scanningActive]);
 
   const toggleFullscreen = () => {
+    unlockAudio();
     if (!isFullscreen) {
       if (document.documentElement.requestFullscreen) {
         document.documentElement.requestFullscreen().catch(() => {});
@@ -137,6 +94,20 @@ export default function KasirVerifyPage() {
       setIsFullscreen(false);
     }
   };
+
+  useEffect(() => {
+    const handleGesture = () => {
+      unlockAudio();
+    };
+    window.addEventListener('click', handleGesture, { passive: true });
+    window.addEventListener('touchstart', handleGesture, { passive: true });
+    window.addEventListener('keydown', handleGesture, { passive: true });
+    return () => {
+      window.removeEventListener('click', handleGesture);
+      window.removeEventListener('touchstart', handleGesture);
+      window.removeEventListener('keydown', handleGesture);
+    };
+  }, []);
 
   useEffect(() => {
     const handleFsChange = () => {
@@ -207,7 +178,7 @@ export default function KasirVerifyPage() {
 
           try {
             const res = await executeRegisterCashierScan(cleanText);
-            playScanChime(res.success);
+            playScanSound(res.success);
             setLastScannedResult(res);
 
             if (res.success) {
@@ -215,7 +186,7 @@ export default function KasirVerifyPage() {
               loadQueue();
             }
           } catch (err: any) {
-            playScanChime(false);
+            playScanSound(false);
             setLastScannedResult({
               success: false,
               message: err.message || 'QR Code tidak valid atau rusak.',
@@ -290,7 +261,7 @@ export default function KasirVerifyPage() {
     try {
       setSubmittingAction(true);
       await executeAdminSubmitDecision(kodeBooking, 'ACC');
-      playScanChime(true);
+      playScanSound(true);
       setActionNotice({
         type: 'success',
         text: `Tiket ${kodeBooking} berhasil di-ACC! Siswa kini dapat masuk gerbang.`,
@@ -300,7 +271,7 @@ export default function KasirVerifyPage() {
       }
       loadQueue();
     } catch (err: any) {
-      playScanChime(false);
+      playScanSound(false);
       setActionNotice({
         type: 'error',
         text: err.message || 'Gagal menyetujui pembayaran.',
@@ -320,7 +291,7 @@ export default function KasirVerifyPage() {
     try {
       setSubmittingAction(true);
       await executeAdminSubmitDecision(targetDeclineCode, 'DECLINE', declineReason.trim());
-      playScanChime(false);
+      playScanSound(false);
       setActionNotice({
         type: 'success',
         text: `Tiket ${targetDeclineCode} ditolak: ${declineReason}`,
@@ -346,14 +317,14 @@ export default function KasirVerifyPage() {
     setSearchingManual(true);
     try {
       const res = await executeRegisterCashierScan(manualCode.trim());
-      playScanChime(res.success);
+      playScanSound(res.success);
       setLastScannedResult(res);
       if (res.success) {
         setActiveTicket(res);
         loadQueue();
       }
     } catch (err: any) {
-      playScanChime(false);
+      playScanSound(false);
       setLastScannedResult({
         success: false,
         message: err.message || 'Kode booking tidak ditemukan.',
