@@ -1,14 +1,5 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import SecretAdminLoginPage from '@/app/woylahpakcik/login/admin/page';
 
-export default function AdminLoginRedirect() {
-  const router = useRouter();
-
-  useEffect(() => {
-    router.replace('/woylahpakcik/login/admin');
-  }, [router]);
-
-  return null;
-}
+export default SecretAdminLoginPage;
