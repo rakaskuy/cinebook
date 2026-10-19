@@ -297,6 +297,8 @@ export default function GateScanPage() {
         status: 'INVALID_QR',
         message: err.message || 'QR Code tidak dapat diverifikasi!',
         available_actions: [],
+        can_action: false,
+        admin_role: 'gate',
       });
       playScanSound(false);
 
@@ -366,6 +368,8 @@ export default function GateScanPage() {
         status: 'INVALID_QR',
         message: err.message || 'Kode tiket tidak ditemukan.',
         available_actions: [],
+        can_action: false,
+        admin_role: 'gate',
       });
       playScanSound(false);
 
