@@ -27,7 +27,7 @@ export function Footer() {
         <div className="flex flex-wrap items-center justify-center gap-2.5 text-xs text-slate-600">
           <div className="flex items-center gap-1.5 bg-slate-50 px-3 py-1.5 border border-slate-200 rounded-lg">
             <ShieldCheck className="w-3.5 h-3.5 text-sky-600" />
-            <span className="font-medium">HMAC-SHA256 Token</span>
+            <span className="font-medium">QR Terverifikasi Server</span>
           </div>
           <div className="flex items-center gap-1.5 bg-slate-50 px-3 py-1.5 border border-slate-200 rounded-lg">
             <QrCode className="w-3.5 h-3.5 text-sky-600" />

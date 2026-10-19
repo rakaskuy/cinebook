@@ -226,7 +226,7 @@ export default function HomePage() {
             <motion.div variants={heroItemVariants} className="flex flex-wrap items-center gap-2.5 pt-1">
               {[
                 { icon: ShieldCheck, text: 'Anti-Overbooking Realtime' },
-                { icon: QrCode, text: 'HMAC Secure QR' },
+                { icon: QrCode, text: 'QR Terverifikasi Server' },
                 { icon: Clock, text: '24 Jam Batas Kasir' },
                 { icon: Volume2, text: 'Audio Bioskop 5.1' },
               ].map((badge, idx) => {
@@ -350,7 +350,7 @@ export default function HomePage() {
           {
             stat: 'Anti-Calo',
             label: 'Sistem Terintegrasi',
-            desc: 'QR HMAC & verifikasi data siswa',
+            desc: 'QR Digital & verifikasi data siswa',
             icon: ShieldCheck,
           },
         ].map((item, idx) => {
@@ -397,7 +397,7 @@ export default function HomePage() {
             {
               num: '02',
               title: 'Terima E-Ticket QR',
-              desc: 'QR Code ber-tanda tangan HMAC aktif instan dan langsung dikirimkan ke email Anda.',
+              desc: 'QR Code resmi terverifikasi server aktif instan dan langsung dikirimkan ke email Anda.',
               icon: QrCode,
             },
             {
