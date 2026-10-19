@@ -11,50 +11,70 @@ type SplashStage = 'welcome' | 'cinemanik' | 'cta' | 'exit';
 
 /**
  * Web Audio API procedural synthesis:
- * Ambient cinema swell when entering intro.
+ * Ambient cinema swell played after user gesture to comply with browser autoplay policy.
  */
 function playAmbientAudio() {
   if (typeof window === 'undefined') return;
-  try {
-    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-    if (!AudioCtx) return;
-    const ctx = new AudioCtx();
-    const now = ctx.currentTime;
 
-    // Sub-bass sweep
-    const subOsc = ctx.createOscillator();
-    const subGain = ctx.createGain();
-    subOsc.type = 'sine';
-    subOsc.frequency.setValueAtTime(50, now);
-    subOsc.frequency.exponentialRampToValueAtTime(70, now + 1.0);
-    subOsc.frequency.exponentialRampToValueAtTime(32, now + 2.2);
+  let played = false;
+  const startAudio = () => {
+    if (played) return;
+    played = true;
+    try {
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      if (ctx.state === 'suspended') {
+        ctx.resume().catch(() => {});
+      }
+      const now = ctx.currentTime;
 
-    subGain.gain.setValueAtTime(0.001, now);
-    subGain.gain.linearRampToValueAtTime(0.18, now + 0.35);
-    subGain.gain.exponentialRampToValueAtTime(0.001, now + 2.4);
+      // Sub-bass sweep
+      const subOsc = ctx.createOscillator();
+      const subGain = ctx.createGain();
+      subOsc.type = 'sine';
+      subOsc.frequency.setValueAtTime(50, now);
+      subOsc.frequency.exponentialRampToValueAtTime(70, now + 1.0);
+      subOsc.frequency.exponentialRampToValueAtTime(32, now + 2.2);
 
-    subOsc.connect(subGain);
-    subGain.connect(ctx.destination);
-    subOsc.start(now);
-    subOsc.stop(now + 2.5);
+      subGain.gain.setValueAtTime(0.001, now);
+      subGain.gain.linearRampToValueAtTime(0.18, now + 0.35);
+      subGain.gain.exponentialRampToValueAtTime(0.001, now + 2.4);
 
-    // Ethereal chord shimmer
-    const chordFreqs = [261.63, 392.0, 523.25, 659.25, 1046.5];
-    const chordGain = ctx.createGain();
-    chordGain.gain.setValueAtTime(0.001, now);
-    chordGain.gain.linearRampToValueAtTime(0.12, now + 0.25);
-    chordGain.gain.exponentialRampToValueAtTime(0.001, now + 2.4);
-    chordGain.connect(ctx.destination);
+      subOsc.connect(subGain);
+      subGain.connect(ctx.destination);
+      subOsc.start(now);
+      subOsc.stop(now + 2.5);
 
-    chordFreqs.forEach((freq, i) => {
-      const osc = ctx.createOscillator();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(freq, now + i * 0.03);
-      osc.connect(chordGain);
-      osc.start(now + i * 0.03);
-      osc.stop(now + 2.5);
-    });
-  } catch {}
+      // Ethereal chord shimmer
+      const chordFreqs = [261.63, 392.0, 523.25, 659.25, 1046.5];
+      const chordGain = ctx.createGain();
+      chordGain.gain.setValueAtTime(0.001, now);
+      chordGain.gain.linearRampToValueAtTime(0.12, now + 0.25);
+      chordGain.gain.exponentialRampToValueAtTime(0.001, now + 2.4);
+      chordGain.connect(ctx.destination);
+
+      chordFreqs.forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, now + i * 0.03);
+        osc.connect(chordGain);
+        osc.start(now + i * 0.03);
+        osc.stop(now + 2.5);
+      });
+    } catch {}
+  };
+
+  const handleGesture = () => {
+    startAudio();
+    window.removeEventListener('pointerdown', handleGesture);
+    window.removeEventListener('keydown', handleGesture);
+    window.removeEventListener('touchstart', handleGesture);
+  };
+
+  window.addEventListener('pointerdown', handleGesture, { once: true, passive: true });
+  window.addEventListener('keydown', handleGesture, { once: true, passive: true });
+  window.addEventListener('touchstart', handleGesture, { once: true, passive: true });
 }
 
 /**
