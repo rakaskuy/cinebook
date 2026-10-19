@@ -452,6 +452,19 @@ export default function TicketPage() {
                   <Info className="w-4 h-4 text-sky-600 shrink-0 mt-0.5" />
                   <span className="leading-relaxed">{getStatusBadge(ticketData.status).desc}</span>
                 </div>
+
+                {/* Email & Spam Folder Notice */}
+                <div className="bg-amber-50/70 border border-amber-200/80 rounded-xl p-3.5 text-xs text-amber-950 flex items-start gap-2.5">
+                  <Mail className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                  <div className="space-y-0.5 leading-relaxed">
+                    <p className="font-semibold text-amber-900">
+                      E-Ticket &amp; QR Code resmi otomatis dikirim ke email ({ticketData.email}).
+                    </p>
+                    <p className="text-[11px] text-amber-800/90">
+                      Jika email tidak muncul di Kotak Masuk (Inbox), mohon periksa folder <strong>Spam</strong>, <strong>Junk</strong>, atau <strong>Promosi</strong>.
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -478,7 +491,7 @@ export default function TicketPage() {
                       exit={{ opacity: 0, scale: 0.9 }}
                       className="text-xs text-emerald-700 flex items-center gap-1 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-md"
                     >
-                      <Check className="w-3.5 h-3.5" /> Terkirim!
+                      <Check className="w-3.5 h-3.5" /> Terkirim! (Cek juga folder Spam)
                     </motion.span>
                   )}
                 </AnimatePresence>

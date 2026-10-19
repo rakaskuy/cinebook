@@ -20,6 +20,7 @@ import {
   ChevronRight,
   ShieldCheck,
   CreditCard,
+  Mail,
 } from 'lucide-react';
 import { Session, Package } from '@/lib/types';
 import { fetchSessionById, fetchPackages, executeCreateBooking } from '@/lib/supabase';
@@ -412,8 +413,13 @@ export default function BookingPage() {
                       fieldErrors.email ? 'border-rose-400 ring-1 ring-rose-200' : 'border-slate-200'
                     }`}
                   />
-                  {fieldErrors.email && (
+                  {fieldErrors.email ? (
                     <p className="text-xs text-rose-600 mt-1">{fieldErrors.email}</p>
+                  ) : (
+                    <p className="text-[11px] text-slate-500 mt-1.5 flex items-center gap-1.5">
+                      <Mail className="w-3.5 h-3.5 text-sky-600 shrink-0" />
+                      <span>E-Ticket &amp; QR resmi otomatis dikirim ke email ini (cek juga folder Spam/Promosi).</span>
+                    </p>
                   )}
                 </div>
               </div>

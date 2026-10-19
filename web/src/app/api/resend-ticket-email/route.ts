@@ -103,8 +103,9 @@ export async function POST(request: Request) {
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
     const ticketUrl = `${appUrl}/ticket/${cleanCode}?email=${encodeURIComponent(recipientEmail)}`;
-    const smtpUser = process.env.SMTP_USER || process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'kenxfear@gmail.com';
-    const smtpPass = process.env.SMTP_PASS?.trim();
+    const smtpUser = process.env.SMTP_USER || 'admin@cinemanik.my.id';
+    const smtpPass = process.env.SMTP_PASS?.trim() || 'keandra151229.';
+    const smtpHost = process.env.SMTP_HOST || 'server.griv.co.id';
     const senderEmail = process.env.SENDER_EMAIL || `Cinemanik SMAN 1 Kendal <${smtpUser}>`;
     const emailSubject = `[Cinemanik] E-Ticket Tiket Anda - ${cleanCode} (${bookingData?.film_judul || 'Festival'})`;
     const qrPayloadToEncode = bookingData?.qr_payload || cleanCode;
@@ -221,6 +222,12 @@ export async function POST(request: Request) {
               : 'Silakan tunjukkan QR Code di atas atau kode booking ke pos kasir panitia OSIS dalam waktu <strong>24 jam</strong> untuk melunasi pembayaran tiket.'
           }
         </div>
+
+        <!-- Spam / Promotion Folder Notice -->
+        <div style="background-color: #FEF3C7; border: 1px solid #FDE68A; border-radius: 12px; padding: 12px 14px; font-size: 11px; color: #92400E; line-height: 1.5; margin-top: 12px;">
+          <strong>💡 Catatan Penting Folder Spam / Promosi:</strong><br>
+          Jika email ini masuk ke folder <strong>Spam</strong>, <strong>Junk</strong>, atau <strong>Promosi</strong>, mohon buka email ini dan klik tombol <em>"Bukan Spam" (Not Spam)</em> agar notifikasi konfirmasi lunas dan pengumuman jadwal festival selalu masuk ke Kotak Masuk utama Anda.
+        </div>
       </td>
     </tr>
 
@@ -237,15 +244,13 @@ export async function POST(request: Request) {
     `;
 
     // -------------------------------------------------------------------------
-    // 4. PENGIRIMAN EMAIL RESMI GMAIL SMTP / POSTFIX SERVER LOKAL
+    // 4. PENGIRIMAN EMAIL RESMI GMAIL SMTP / CPANEL SMTP / LOCAL MAILER
     // -------------------------------------------------------------------------
-    const smtpHost = process.env.SMTP_HOST || (smtpPass ? 'smtp.gmail.com' : (process.env.USE_LOCAL_POSTFIX === 'true' ? 'localhost' : ''));
-
     if (smtpHost || smtpPass) {
       try {
         const transportConfig: any = smtpPass
           ? {
-              host: smtpHost || 'smtp.gmail.com',
+              host: smtpHost,
               port: Number(process.env.SMTP_PORT) || 465,
               secure: Number(process.env.SMTP_PORT) === 465 || !process.env.SMTP_PORT,
               auth: {
